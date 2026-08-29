@@ -22,6 +22,17 @@ script that picks a host. Ambient values are the *fallback*, never the preferenc
 reasoning applies to the dev script: default to the Replit domain, but let an explicitly
 exported value override it rather than hard-coding the assignment.
 
+# Browser-based testing needs the local API, the phone does not
+
+With the app pointed at the production API host, the Expo *web* preview cannot load data:
+the production CORS allowlist only admits the real website origin, and the browser enforces
+it. Native phones ignore CORS entirely, so the same build works fine in Expo Go.
+
+**How to apply:** to run the Playwright tester (or any browser) against the Expo web build,
+temporarily remove the explicit domain so the app falls back to the workspace API — same
+database, same code — then restore it and restart the expo workflow when done. Do not add
+dev origins to the production allowlist for this.
+
 # Verifying an EXPO_PUBLIC_* change actually took effect
 
 Restarting Metro is not proof. These variables are inlined into the bundle at transform time
