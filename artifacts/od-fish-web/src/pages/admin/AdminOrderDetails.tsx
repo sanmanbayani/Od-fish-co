@@ -8,7 +8,7 @@ import {
   useRecordOrderCash
 } from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
-import { formatPaise, formatOnlyDate, formatTime, formatWeight } from "@/lib/format";
+import { formatPaise, formatOnlyDate, formatTime, formatWeight, slotWindow } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -388,7 +388,7 @@ export default function AdminOrderDetails() {
               <div className="flex gap-3 pt-2 border-t">
                 <Clock className="w-4 h-4 text-muted-foreground mt-0.5" />
                 <div>
-                  <div className="font-bold">Slot: {order.slotLabel}</div>
+                  <div className="font-bold">Slot: {slotWindow(order.slotLabel)}</div>
                   <div className="text-muted-foreground">{formatOnlyDate(order.deliveryDate)}</div>
                 </div>
               </div>

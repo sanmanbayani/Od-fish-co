@@ -316,6 +316,7 @@ export interface VariantUpdate {
 
 export interface DeliverySlot {
   id: string;
+  /** Delivery window only (11 AM - 2 PM style); the day is carried by deliveryDate. */
   label: string;
   startTime: string;
   endTime: string;
@@ -480,6 +481,7 @@ export interface Order {
   paymentMethod: OrderPaymentMethod;
   paymentStatus: OrderPaymentStatus;
   address: OrderAddress;
+  /** Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix. */
   slotLabel: string;
   deliveryDate: string;
   items: OrderItem[];
@@ -647,6 +649,7 @@ export interface AdminOrder {
   address: OrderAddress;
   /** @nullable */
   slotId?: string | null;
+  /** Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix. */
   slotLabel: string;
   deliveryDate: string;
   items: OrderItem[];
@@ -857,7 +860,9 @@ export interface RiderOrder {
   customerName: string;
   customerPhone: string;
   address: OrderAddress;
+  /** Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix. */
   slotLabel: string;
+  deliveryDate: string;
   itemCount: number;
   totalPaise: number;
   collectCashPaise: number;

@@ -109,6 +109,17 @@ export function deliveryDate(iso: string): string {
   });
 }
 
+/**
+ * Orders placed before the slot-label change stored labels like
+ * "Tomorrow, 11 AM - 2 PM" or "Sun, 31 Aug, 11 AM - 2 PM". Strip that legacy
+ * day prefix so an old order does not claim delivery "Tomorrow" forever —
+ * the real day is rendered from deliveryDate alongside it.
+ */
+export function slotWindow(label: string | null | undefined): string {
+  if (!label) return '';
+  return label.replace(/^(?:Today|Tomorrow|[A-Z][a-z]{2},?\s+\d{1,2}\s+[A-Z][a-z]{2}),\s*/, '');
+}
+
 /** Full timestamp → `30 Aug, 7:42 pm` */
 export function timestamp(iso: string): string {
   const d = new Date(iso);

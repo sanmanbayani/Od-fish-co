@@ -360,7 +360,14 @@ function VariantOption({
         </Text>
       </View>
       <View style={styles.variantRight}>
-        <Text variant="bodySemi">{rupees(variant.pricePaise)}</Text>
+        <View style={styles.variantPriceRow}>
+          {variant.mrpPaise > variant.pricePaise ? (
+            <Text variant="tiny" tone="muted" style={styles.strike}>
+              {rupees(variant.mrpPaise)}
+            </Text>
+          ) : null}
+          <Text variant="bodySemi">{rupees(variant.pricePaise)}</Text>
+        </View>
         {soldOut ? (
           <Badge label="Sold out" tone="neutral" />
         ) : low ? (
@@ -411,6 +418,7 @@ const styles = StyleSheet.create({
   },
   variantMeta: { marginTop: 2 },
   variantRight: { alignItems: 'flex-end', gap: 4 },
+  variantPriceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 5 },
   weightCard: { marginTop: spacing.lg },
   weightRows: { marginTop: 10, gap: 7 },
   weightRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },

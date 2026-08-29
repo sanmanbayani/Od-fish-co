@@ -1,5 +1,5 @@
 import { useGetAdminDashboard, getGetAdminDashboardQueryKey } from "@workspace/api-client-react";
-import { formatPaise, formatOnlyDate } from "@/lib/format";
+import { formatPaise, formatOnlyDate, slotWindow } from "@/lib/format";
 import {
   Card, CardContent, CardHeader, CardTitle
 } from "@/components/ui/card";
@@ -281,7 +281,7 @@ export default function AdminDashboard() {
                     <div className="flex items-center justify-between p-3 rounded-md bg-muted/50 hover:bg-muted cursor-pointer transition-colors border">
                       <div className="flex flex-col">
                         <span className="font-mono text-sm font-bold">{order.orderNumber}</span>
-                        <span className="text-xs text-muted-foreground">{order.customerName} • {order.slotLabel}</span>
+                        <span className="text-xs text-muted-foreground">{order.customerName} • {formatOnlyDate(order.deliveryDate)} · {slotWindow(order.slotLabel)}</span>
                       </div>
                       <div className="text-right flex flex-col items-end">
                         <span className="text-xs font-bold px-2 py-0.5 rounded bg-primary/10 text-primary">{order.status}</span>
@@ -310,7 +310,7 @@ export default function AdminDashboard() {
               {dashboard.slotLoad.map(slot => (
                 <div key={`${slot.slotId}|${slot.deliveryDate}`} className="flex flex-col gap-1.5">
                   <div className="flex justify-between text-sm">
-                    <span className="font-medium">{slot.label}</span>
+                    <span className="font-medium">{slot.label} <span className="font-normal text-muted-foreground">· {formatOnlyDate(slot.deliveryDate)}</span></span>
                     <span className="text-muted-foreground">{slot.orders} / {slot.capacity}</span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-2 overflow-hidden">

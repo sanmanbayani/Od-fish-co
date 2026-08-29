@@ -19,6 +19,7 @@ export interface Order {
   paymentMethod: OrderPaymentMethod;
   paymentStatus: OrderPaymentStatus;
   address: OrderAddress;
+  /** Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix. */
   slotLabel: string;
   deliveryDate: string;
   items: OrderItem[];

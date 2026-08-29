@@ -20,6 +20,7 @@ export interface AdminOrder {
   address: OrderAddress;
   /** @nullable */
   slotId?: string | null;
+  /** Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix. */
   slotLabel: string;
   deliveryDate: string;
   items: OrderItem[];

@@ -1530,7 +1530,9 @@ components:
       required: [id, label, startTime, endTime, cutoffTime, deliveryDate, isOpen]
       properties:
         id: { type: string }
-        label: { type: string }
+        label:
+          type: string
+          description: Delivery window only (11 AM - 2 PM style); the day is carried by deliveryDate.
         startTime: { type: string }
         endTime: { type: string }
         cutoffTime: { type: string }
@@ -1741,7 +1743,9 @@ components:
         paymentStatus: { type: string, enum: [PENDING, PAID, FAILED, REFUNDED] }
         address:
           $ref: "#/components/schemas/OrderAddress"
-        slotLabel: { type: string }
+        slotLabel:
+          type: string
+          description: Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix.
         deliveryDate: { type: string }
         items:
           type: array
@@ -1962,7 +1966,9 @@ components:
         address:
           $ref: "#/components/schemas/OrderAddress"
         slotId: { type: ["string", "null"] }
-        slotLabel: { type: string }
+        slotLabel:
+          type: string
+          description: Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix.
         deliveryDate: { type: string }
         items:
           type: array
@@ -2185,6 +2191,7 @@ components:
           customerPhone,
           address,
           slotLabel,
+          deliveryDate,
           itemCount,
           totalPaise,
           collectCashPaise,
@@ -2199,7 +2206,10 @@ components:
         customerPhone: { type: string }
         address:
           $ref: "#/components/schemas/OrderAddress"
-        slotLabel: { type: string }
+        slotLabel:
+          type: string
+          description: Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix.
+        deliveryDate: { type: string }
         itemCount: { type: integer }
         totalPaise: { type: integer }
         collectCashPaise: { type: integer }

@@ -1,12 +1,13 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import type { Product } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { overlay, radii } from '@/constants/colors';
 import { mediaUrl } from '@/lib/api';
-import { cutLabel, discountPercent, netWeightRange, rupees } from '@/lib/format';
+import { cutLabel, discountPercent, rupees } from '@/lib/format';
 import { Text } from '@/components/ui/Text';
 import { Badge } from '@/components/ui/Badge';
 
@@ -16,9 +17,7 @@ export function ProductRow({ product }: { product: Product }) {
   const active = product.variants.filter((v) => v.isActive);
   const cheapest = [...active].sort((a, b) => a.pricePaise - b.pricePaise)[0];
   const off = cheapest ? discountPercent(cheapest.mrpPaise, cheapest.pricePaise) : null;
-  const weight = cheapest
-    ? netWeightRange(cheapest.netWeightMinG, cheapest.netWeightMaxG)
-    : null;
+  const multiPack = active.length > 1;
 
   return (
     <Pressable
@@ -57,12 +56,20 @@ export function ProductRow({ product }: { product: Product }) {
         ) : null}
         {cheapest ? (
           <Text variant="tiny" tone="muted" numberOfLines={1} style={styles.meta}>
-            {cutLabel(cheapest.cutType)} · {cheapest.packLabel}
-            {weight ? ` · ${weight}` : ''}
+            {/* With several sizes on offer, naming just one pack is misleading
+                and overflows the row — say how many sizes there are instead. */}
+            {multiPack
+              ? `${cutLabel(cheapest.cutType)} · ${active.length} pack sizes`
+              : `${cutLabel(cheapest.cutType)} · ${cheapest.packLabel}`}
           </Text>
         ) : null}
         <View style={styles.footer}>
           <View style={styles.priceRow}>
+            {multiPack ? (
+              <Text variant="tiny" tone="muted">
+                From
+              </Text>
+            ) : null}
             <Text variant="price">
               {rupees(product.fromPricePaise ?? cheapest?.pricePaise)}
             </Text>
@@ -73,10 +80,12 @@ export function ProductRow({ product }: { product: Product }) {
             ) : null}
           </View>
           {product.inStock ? (
-            <View style={[styles.cta, { borderColor: colors.primary }]}>
-              <Text variant="smallMedium" tone="primary">
-                {active.length > 1 ? `${active.length} packs` : 'View'}
-              </Text>
+            <View style={[styles.cta, { backgroundColor: colors.primary }]}>
+              <Feather
+                name="chevron-right"
+                size={16}
+                color={colors.primaryForeground}
+              />
             </View>
           ) : (
             <Badge label="Sold out" tone="neutral" />
@@ -112,9 +121,10 @@ const styles = StyleSheet.create({
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   strike: { textDecorationLine: 'line-through' },
   cta: {
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

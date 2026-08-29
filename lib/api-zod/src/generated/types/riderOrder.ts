@@ -15,7 +15,9 @@ export interface RiderOrder {
   customerName: string;
   customerPhone: string;
   address: OrderAddress;
+  /** Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix. */
   slotLabel: string;
+  deliveryDate: string;
   itemCount: number;
   totalPaise: number;
   collectCashPaise: number;

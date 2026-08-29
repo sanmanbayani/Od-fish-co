@@ -22,6 +22,7 @@ import {
   statusLabel,
   timestamp,
   TRACKING_STEPS,
+  slotWindow,
 } from '@/lib/format';
 import { Text } from '@/components/ui/Text';
 import { Badge } from '@/components/ui/Badge';
@@ -165,7 +166,7 @@ export default function OrderScreen() {
             <View style={styles.flex}>
               <Text variant="section">{statusLabel(data.status)}</Text>
               <Text variant="small" tone="muted" style={styles.gap}>
-                {deliveryDate(data.deliveryDate)} · {data.slotLabel}
+                {deliveryDate(data.deliveryDate)} · {slotWindow(data.slotLabel)}
               </Text>
             </View>
             <Badge label={statusLabel(data.status)} tone={statusTone(data.status)} />

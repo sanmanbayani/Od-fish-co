@@ -1,7 +1,7 @@
 import React from "react";
 import { useListRiderOrders, getListRiderOrdersQueryKey } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { formatPaise } from "@/lib/format";
+import { formatPaise, formatOnlyDate, slotWindow } from "@/lib/format";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapPin, Phone, Package, IndianRupee, ArrowRight, AlertCircle, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -83,7 +83,7 @@ export default function RiderDashboard() {
                       </div>
                       <div className="flex items-center gap-3">
                         <Clock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                        <span className="text-muted-foreground">{order.slotLabel}</span>
+                        <span className="text-muted-foreground">{formatOnlyDate(order.deliveryDate)} · {slotWindow(order.slotLabel)}</span>
                       </div>
                     </div>
                   </CardContent>

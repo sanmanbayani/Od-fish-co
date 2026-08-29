@@ -246,6 +246,7 @@ export function serializeRiderOrder(
     customerPhone: customer.phone,
     address: serializeAddress(order),
     slotLabel: order.slotLabel,
+    deliveryDate: order.deliveryDate,
     itemCount: bundle.items.reduce((sum, item) => sum + item.quantity, 0),
     totalPaise: order.totalPaise,
     collectCashPaise:

@@ -9,7 +9,7 @@ import { useListOrders } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { radii, spacing } from '@/constants/colors';
 import { mediaUrl } from '@/lib/api';
-import { deliveryDate, rupees, statusLabel, timestamp } from '@/lib/format';
+import { deliveryDate, rupees, slotWindow, statusLabel, timestamp } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
 import { Text } from '@/components/ui/Text';
 import { Badge } from '@/components/ui/Badge';
@@ -157,7 +157,7 @@ function OrderCard({ order }: { order: Order }) {
               : `${order.items[0].productName} + ${order.items.length - 1} more`}
           </Text>
           <Text variant="tiny" tone="muted" style={styles.slot}>
-            {deliveryDate(order.deliveryDate)} · {order.slotLabel}
+            {deliveryDate(order.deliveryDate)} · {slotWindow(order.slotLabel)}
           </Text>
         </View>
       </View>

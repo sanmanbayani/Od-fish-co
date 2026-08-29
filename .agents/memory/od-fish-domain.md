@@ -80,6 +80,22 @@ plausibly on screen, which is exactly why neither was caught by eye.
 the date alongside the id. A function that takes only a slot id and returns something
 delivery-specific is wrong by construction.
 
+## Slot labels are window-only, and orders freeze them forever
+
+A slot instance's `label` is just the window ("11 AM - 2 PM"); the day travels separately
+in `deliveryDate`, and every renderer composes the two. Checkout copies the label onto the
+order row permanently.
+
+**Why:** the label once embedded a relative day ("Tomorrow, 11 AM - 2 PM"). Consumers that
+prepended the day showed it twice, and — because orders store the label — old orders claimed
+delivery "Tomorrow" forever. The semantics are not expressible in the type, so the change
+silently broke web staff views that had relied on the day being inside the string.
+
+**How to apply:** never put day/date words inside a slot or order label. When rendering a
+*stored* order label, pass it through the `slotWindow()` legacy-prefix strip (exists in both
+surfaces' format libs) and show the day from `deliveryDate`. Old DB rows keep legacy text —
+display-time compatibility, not data mutation.
+
 # Marathi alongside English
 
 Product names carry a local (Marathi) name displayed with the English one.

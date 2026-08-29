@@ -117,7 +117,12 @@ export function upcomingSlots(
 
       instances.push({
         id: definition.id,
-        label: `${relativeDayLabel(deliveryDate, now)}, ${definition.label}`,
+        // The label is the delivery window only ("11 AM – 2 PM"); the day is
+        // carried by deliveryDate. Baking a relative day like "Tomorrow" into
+        // the label made consumers show the day twice — and it was stored onto
+        // orders at checkout, so an order read two days later still claimed
+        // delivery "Tomorrow".
+        label: definition.label,
         startTime: definition.startTime,
         endTime: definition.endTime,
         cutoffTime: definition.cutoffTime,

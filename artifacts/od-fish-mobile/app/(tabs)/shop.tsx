@@ -65,9 +65,9 @@ export default function ShopScreen() {
           returnKeyType="search"
           autoCorrect={false}
           containerStyle={styles.search}
-          prefix=""
-          // Feather search glyph rendered via prefix slot is not supported,
-          // so the placeholder carries the affordance.
+          leading={
+            <Feather name="search" size={16} color={colors.mutedForeground} />
+          }
         />
         <ScrollView
           horizontal

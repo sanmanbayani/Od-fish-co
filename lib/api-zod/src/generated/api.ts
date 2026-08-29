@@ -72,7 +72,7 @@ export const GetPublicSummaryResponse = zod.object({
 })),
   "nextSlot": zod.union([zod.object({
   "id": zod.string(),
-  "label": zod.string(),
+  "label": zod.string().describe('Delivery window only (11 AM - 2 PM style); the day is carried by deliveryDate.'),
   "startTime": zod.string(),
   "endTime": zod.string(),
   "cutoffTime": zod.string(),
@@ -343,7 +343,7 @@ export const GetHomeFeedResponse = zod.object({
   "storeOpen": zod.boolean(),
   "nextSlot": zod.union([zod.object({
   "id": zod.string(),
-  "label": zod.string(),
+  "label": zod.string().describe('Delivery window only (11 AM - 2 PM style); the day is carried by deliveryDate.'),
   "startTime": zod.string(),
   "endTime": zod.string(),
   "cutoffTime": zod.string(),
@@ -541,7 +541,7 @@ export const GetProductResponse = zod.object({
  */
 export const ListDeliverySlotsResponseItem = zod.object({
   "id": zod.string(),
-  "label": zod.string(),
+  "label": zod.string().describe('Delivery window only (11 AM - 2 PM style); the day is carried by deliveryDate.'),
   "startTime": zod.string(),
   "endTime": zod.string(),
   "cutoffTime": zod.string(),
@@ -738,7 +738,7 @@ export const ListOrdersResponseItem = zod.object({
   "state": zod.string().nullish(),
   "pincode": zod.string()
 }),
-  "slotLabel": zod.string(),
+  "slotLabel": zod.string().describe('Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix.'),
   "deliveryDate": zod.string(),
   "items": zod.array(zod.object({
   "id": zod.string(),
@@ -809,7 +809,7 @@ export const CreateOrderResponse = zod.object({
   "state": zod.string().nullish(),
   "pincode": zod.string()
 }),
-  "slotLabel": zod.string(),
+  "slotLabel": zod.string().describe('Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix.'),
   "deliveryDate": zod.string(),
   "items": zod.array(zod.object({
   "id": zod.string(),
@@ -869,7 +869,7 @@ export const GetOrderResponse = zod.object({
   "state": zod.string().nullish(),
   "pincode": zod.string()
 }),
-  "slotLabel": zod.string(),
+  "slotLabel": zod.string().describe('Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix.'),
   "deliveryDate": zod.string(),
   "items": zod.array(zod.object({
   "id": zod.string(),
@@ -937,7 +937,7 @@ export const PayOrderResponse = zod.object({
   "state": zod.string().nullish(),
   "pincode": zod.string()
 }),
-  "slotLabel": zod.string(),
+  "slotLabel": zod.string().describe('Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix.'),
   "deliveryDate": zod.string(),
   "items": zod.array(zod.object({
   "id": zod.string(),
@@ -1004,7 +1004,7 @@ export const CancelOrderResponse = zod.object({
   "state": zod.string().nullish(),
   "pincode": zod.string()
 }),
-  "slotLabel": zod.string(),
+  "slotLabel": zod.string().describe('Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix.'),
   "deliveryDate": zod.string(),
   "items": zod.array(zod.object({
   "id": zod.string(),
@@ -1173,7 +1173,7 @@ export const GetAdminDashboardResponse = zod.object({
   "pincode": zod.string()
 }),
   "slotId": zod.string().nullish(),
-  "slotLabel": zod.string(),
+  "slotLabel": zod.string().describe('Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix.'),
   "deliveryDate": zod.string(),
   "items": zod.array(zod.object({
   "id": zod.string(),
@@ -1265,7 +1265,7 @@ export const ListAdminOrdersResponseItem = zod.object({
   "pincode": zod.string()
 }),
   "slotId": zod.string().nullish(),
-  "slotLabel": zod.string(),
+  "slotLabel": zod.string().describe('Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix.'),
   "deliveryDate": zod.string(),
   "items": zod.array(zod.object({
   "id": zod.string(),
@@ -1331,7 +1331,7 @@ export const GetAdminOrderResponse = zod.object({
   "pincode": zod.string()
 }),
   "slotId": zod.string().nullish(),
-  "slotLabel": zod.string(),
+  "slotLabel": zod.string().describe('Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix.'),
   "deliveryDate": zod.string(),
   "items": zod.array(zod.object({
   "id": zod.string(),
@@ -1410,7 +1410,7 @@ export const UpdateAdminOrderStatusResponse = zod.object({
   "pincode": zod.string()
 }),
   "slotId": zod.string().nullish(),
-  "slotLabel": zod.string(),
+  "slotLabel": zod.string().describe('Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix.'),
   "deliveryDate": zod.string(),
   "items": zod.array(zod.object({
   "id": zod.string(),
@@ -1478,7 +1478,7 @@ export const RecordOrderCashResponse = zod.object({
   "pincode": zod.string()
 }),
   "slotId": zod.string().nullish(),
-  "slotLabel": zod.string(),
+  "slotLabel": zod.string().describe('Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix.'),
   "deliveryDate": zod.string(),
   "items": zod.array(zod.object({
   "id": zod.string(),
@@ -1550,7 +1550,7 @@ export const AssignRiderResponse = zod.object({
   "pincode": zod.string()
 }),
   "slotId": zod.string().nullish(),
-  "slotLabel": zod.string(),
+  "slotLabel": zod.string().describe('Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix.'),
   "deliveryDate": zod.string(),
   "items": zod.array(zod.object({
   "id": zod.string(),
@@ -2196,7 +2196,8 @@ export const ListRiderOrdersResponseItem = zod.object({
   "state": zod.string().nullish(),
   "pincode": zod.string()
 }),
-  "slotLabel": zod.string(),
+  "slotLabel": zod.string().describe('Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix.'),
+  "deliveryDate": zod.string(),
   "itemCount": zod.number().int(),
   "totalPaise": zod.number().int(),
   "collectCashPaise": zod.number().int(),
@@ -2255,7 +2256,8 @@ export const VerifyDeliveryOtpResponse = zod.object({
   "state": zod.string().nullish(),
   "pincode": zod.string()
 }),
-  "slotLabel": zod.string(),
+  "slotLabel": zod.string().describe('Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix.'),
+  "deliveryDate": zod.string(),
   "itemCount": zod.number().int(),
   "totalPaise": zod.number().int(),
   "collectCashPaise": zod.number().int(),
@@ -2303,7 +2305,8 @@ export const StartRiderDeliveryResponse = zod.object({
   "state": zod.string().nullish(),
   "pincode": zod.string()
 }),
-  "slotLabel": zod.string(),
+  "slotLabel": zod.string().describe('Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix.'),
+  "deliveryDate": zod.string(),
   "itemCount": zod.number().int(),
   "totalPaise": zod.number().int(),
   "collectCashPaise": zod.number().int(),
@@ -2351,7 +2354,8 @@ export const ReportUnreachableResponse = zod.object({
   "state": zod.string().nullish(),
   "pincode": zod.string()
 }),
-  "slotLabel": zod.string(),
+  "slotLabel": zod.string().describe('Delivery window only; the day lives in deliveryDate. Orders stored before the label change may still embed a legacy day prefix.'),
+  "deliveryDate": zod.string(),
   "itemCount": zod.number().int(),
   "totalPaise": zod.number().int(),
   "collectCashPaise": zod.number().int(),

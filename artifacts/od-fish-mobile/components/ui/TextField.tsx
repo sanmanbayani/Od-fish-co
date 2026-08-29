@@ -17,6 +17,8 @@ export type TextFieldProps = TextInputProps & {
   hint?: string;
   error?: string | null;
   prefix?: string;
+  /** Icon (or any node) rendered inside the field, before the input. */
+  leading?: React.ReactNode;
   containerStyle?: StyleProp<ViewStyle>;
 };
 
@@ -25,6 +27,7 @@ export function TextField({
   hint,
   error,
   prefix,
+  leading,
   containerStyle,
   style,
   ...rest
@@ -53,6 +56,7 @@ export function TextField({
           },
         ]}
       >
+        {leading ? <View style={styles.leading}>{leading}</View> : null}
         {prefix ? (
           <Text variant="bodyMedium" tone="muted" style={styles.prefix}>
             {prefix}
@@ -99,6 +103,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   prefix: { marginRight: 6 },
+  leading: { marginRight: 8 },
   input: { flex: 1, fontSize: 15, paddingVertical: 12 },
   helper: { marginTop: 5 },
 });

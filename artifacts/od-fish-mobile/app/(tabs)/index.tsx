@@ -122,6 +122,11 @@ export default function HomeScreen() {
                   {countdown(slot.secondsToCutoff)}
                 </Text>
               ) : null}
+              <Feather
+                name="chevron-right"
+                size={15}
+                color={overlay.mutedForeground}
+              />
             </Pressable>
           ) : (
             <View style={[styles.slotStrip, { borderColor: overlay.hairline }]}>
@@ -275,6 +280,7 @@ export default function HomeScreen() {
             <SectionHeader
               title="Today's catch"
               caption="Landed this morning at Sassoon Dock"
+              onSeeAll={() => router.push('/(tabs)/shop')}
             />
             <ScrollView
               horizontal
@@ -291,7 +297,11 @@ export default function HomeScreen() {
         {/* Popular */}
         {data.popular.length > 0 ? (
           <View style={styles.section}>
-            <SectionHeader title="Mumbai's regulars" caption="What our kitchens reorder" />
+            <SectionHeader
+              title="Mumbai's regulars"
+              caption="What our kitchens reorder"
+              onSeeAll={() => router.push('/(tabs)/shop')}
+            />
             <View style={styles.grid}>
               {data.popular.map((product) => (
                 <ProductCard key={product.id} product={product} width={gridWidth} />
@@ -329,10 +339,31 @@ export default function HomeScreen() {
   );
 }
 
-function SectionHeader({ title, caption }: { title: string; caption?: string }) {
+function SectionHeader({
+  title,
+  caption,
+  onSeeAll,
+}: {
+  title: string;
+  caption?: string;
+  onSeeAll?: () => void;
+}) {
+  const colors = useColors();
   return (
     <View style={styles.sectionHeader}>
-      <Text variant="section">{title}</Text>
+      <View style={styles.sectionTitleRow}>
+        <Text variant="section" style={styles.flex}>
+          {title}
+        </Text>
+        {onSeeAll ? (
+          <Pressable onPress={onSeeAll} hitSlop={8} style={styles.seeAll}>
+            <Text variant="smallMedium" tone="primary">
+              See all
+            </Text>
+            <Feather name="chevron-right" size={15} color={colors.primary} />
+          </Pressable>
+        ) : null}
+      </View>
       {caption ? (
         <Text variant="small" tone="muted" style={styles.caption}>
           {caption}
@@ -368,6 +399,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   section: { marginTop: spacing.xl, paddingHorizontal: spacing.lg },
   sectionHeader: { marginBottom: spacing.md },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  seeAll: { flexDirection: 'row', alignItems: 'center', gap: 1 },
   caption: { marginTop: 2 },
   pinCard: { padding: spacing.lg, borderWidth: StyleSheet.hairlineWidth },
   pinRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 10 },

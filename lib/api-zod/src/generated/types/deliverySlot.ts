@@ -8,6 +8,7 @@
 
 export interface DeliverySlot {
   id: string;
+  /** Delivery window only (11 AM - 2 PM style); the day is carried by deliveryDate. */
   label: string;
   startTime: string;
   endTime: string;

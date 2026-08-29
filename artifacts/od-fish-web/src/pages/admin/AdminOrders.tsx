@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useListAdminOrders } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { formatPaise, formatOnlyDate } from "@/lib/format";
+import { formatPaise, formatOnlyDate, slotWindow } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -115,7 +115,7 @@ export default function AdminOrders() {
                     <div className="text-xs text-muted-foreground">{order.customerPhone}</div>
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm">{order.slotLabel}</div>
+                    <div className="text-sm">{slotWindow(order.slotLabel)}</div>
                     <div className="text-xs text-muted-foreground">{formatOnlyDate(order.deliveryDate)}</div>
                   </TableCell>
                   <TableCell>
