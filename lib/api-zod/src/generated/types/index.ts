@@ -78,6 +78,7 @@ export * from './staffUpdateRole';
 export * from './statusCount';
 export * from './storeSettings';
 export * from './storeSettingsUpdate';
+export * from './variantDeleteResult';
 export * from './variantInput';
 export * from './variantInputSoldBy';
 export * from './variantUpdate';

@@ -42,6 +42,21 @@ pack and disclosing the range up front removes the argument at the door.
 **How to apply:** any surface showing a variant must show the net range, not just the
 price. Do not present net weight as a single exact number.
 
+## Deleting a pack is two different operations
+
+A pack that has never been ordered is deleted outright. A pack that appears in any order is
+archived (`isActive: false`) instead, and the API tells the caller which of the two happened.
+
+**Why:** `order_items` references a variant without a cascade, so the record of what a
+customer actually bought has to survive. But archiving *everything* is what made the admin
+console feel broken — a pack created by mistake could never be got rid of, it just sat in the
+list greyed out for ever. Only carts cascade away, which is correct: an unordered pack that
+vanishes should leave nobody's cart holding it.
+
+**How to apply:** take the decision inside one transaction with `FOR UPDATE` on the variant
+row. Checking and then deleting in two statements lets a checkout land in between and turns
+the archive case into a foreign-key crash.
+
 # Delivery model
 
 Slotted delivery with hard cutoffs, pincode-gated serviceability, and a waitlist capture

@@ -26,6 +26,20 @@ const DialogOverlay = React.forwardRef<
 ));
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
+/**
+ * A centred dialog must not use tw-animate-css's `slide-in-from-left-1/2` /
+ * `slide-in-from-top-[48%]` pair, which shadcn ships for Tailwind v3.
+ *
+ * Under Tailwind v3 the centring `-translate-x-1/2` was folded into `transform`,
+ * so the enter keyframe (which also writes `transform`) replaced it and the -50%
+ * slide values simply restored the centring. Tailwind v4 emits the centring on
+ * the separate `translate` property instead, so the keyframe's transform now
+ * *stacks on top of it* — the dialog started a full width left and a full height
+ * up, flying in from the top-left corner of the screen.
+ *
+ * Anything applied here is therefore a genuine offset from the centred position.
+ * A 2-unit rise is all that is wanted.
+ */
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
@@ -35,7 +49,7 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg max-h-[85vh] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg',
+        'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg max-h-[85vh] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-bottom-2 data-[state=open]:slide-in-from-bottom-2 sm:rounded-lg',
         className,
       )}
       {...props}

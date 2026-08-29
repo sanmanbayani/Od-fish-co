@@ -71,6 +71,7 @@ import type {
   StaffUpdate,
   StoreSettings,
   StoreSettingsUpdate,
+  VariantDeleteResult,
   VariantInput,
   VariantUpdate,
   WaitlistEntryInput
@@ -3179,7 +3180,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getUpdateVariantMutationOptions(options));
     }
 
-export const getArchiveVariantUrl = (id: string,) => {
+export const getDeleteVariantUrl = (id: string,) => {
 
 
 
@@ -3187,9 +3188,12 @@ export const getArchiveVariantUrl = (id: string,) => {
   return `/api/admin/variants/${id}`
 }
 
-export const archiveVariant = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<OkResult> => {
+/**
+ * @summary Remove a pack, or archive it when order history still refers to it
+ */
+export const deleteVariant = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<VariantDeleteResult> => {
 
-  return customFetch<OkResult>(getArchiveVariantUrl(id),
+  return customFetch<VariantDeleteResult>(getDeleteVariantUrl(id),
   {
     ...options,
     method: 'DELETE'
@@ -3202,11 +3206,11 @@ export const archiveVariant = async (id: string, options?: Parameters<typeof cus
 
 
 
-export const getArchiveVariantMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveVariant>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof archiveVariant>>, TError,{id: string}, TContext> => {
+export const getDeleteVariantMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVariant>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteVariant>>, TError,{id: string}, TContext> => {
 
-const mutationKey = ['archiveVariant'];
+const mutationKey = ['deleteVariant'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -3216,10 +3220,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof archiveVariant>>, {id: string}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteVariant>>, {id: string}> = (props) => {
           const {id} = props ?? {};
 
-          return  archiveVariant(id,requestOptions)
+          return  deleteVariant(id,requestOptions)
         }
 
 
@@ -3229,19 +3233,22 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type ArchiveVariantMutationResult = NonNullable<Awaited<ReturnType<typeof archiveVariant>>>
+    export type DeleteVariantMutationResult = NonNullable<Awaited<ReturnType<typeof deleteVariant>>>
 
-    export type ArchiveVariantMutationError = ErrorType<unknown>
+    export type DeleteVariantMutationError = ErrorType<unknown>
 
-    export const useArchiveVariant = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveVariant>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+    /**
+ * @summary Remove a pack, or archive it when order history still refers to it
+ */
+export const useDeleteVariant = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVariant>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
-        Awaited<ReturnType<typeof archiveVariant>>,
+        Awaited<ReturnType<typeof deleteVariant>>,
         TError,
         {id: string},
         TContext
       > => {
-      return useMutation(getArchiveVariantMutationOptions(options));
+      return useMutation(getDeleteVariantMutationOptions(options));
     }
 
 export const getListInventoryUrl = () => {

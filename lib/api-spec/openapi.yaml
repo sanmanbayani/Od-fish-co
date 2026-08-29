@@ -860,8 +860,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ProductVariant"
     delete:
-      operationId: archiveVariant
+      operationId: deleteVariant
       tags: [admin]
+      summary: Remove a pack, or archive it when order history still refers to it
       parameters:
         - name: id
           in: path
@@ -873,7 +874,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OkResult"
+                $ref: "#/components/schemas/VariantDeleteResult"
 
   # ---------------------------------------------------------------- ADMIN INVENTORY
   /admin/inventory:
@@ -1226,6 +1227,17 @@ components:
       required: [ok]
       properties:
         ok: { type: boolean }
+
+    VariantDeleteResult:
+      type: object
+      required: [ok, deleted]
+      properties:
+        ok: { type: boolean }
+        deleted:
+          type: boolean
+          description: >-
+            True when the pack was removed outright. False when it was archived
+            instead, because a past order still refers to it.
 
     ErrorResult:
       type: object

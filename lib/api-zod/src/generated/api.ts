@@ -1856,12 +1856,16 @@ export const UpdateVariantResponse = zod.object({
 })
 
 
-export const ArchiveVariantParams = zod.object({
+/**
+ * @summary Remove a pack, or archive it when order history still refers to it
+ */
+export const DeleteVariantParams = zod.object({
   "id": zod.coerce.string()
 })
 
-export const ArchiveVariantResponse = zod.object({
-  "ok": zod.boolean()
+export const DeleteVariantResponse = zod.object({
+  "ok": zod.boolean(),
+  "deleted": zod.boolean().describe('True when the pack was removed outright. False when it was archived instead, because a past order still refers to it.')
 })
 
 

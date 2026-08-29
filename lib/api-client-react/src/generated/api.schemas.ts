@@ -13,6 +13,12 @@ export interface OkResult {
   ok: boolean;
 }
 
+export interface VariantDeleteResult {
+  ok: boolean;
+  /** True when the pack was removed outright. False when it was archived instead, because a past order still refers to it. */
+  deleted: boolean;
+}
+
 export interface ErrorResult {
   error: string;
   code?: string;

@@ -749,14 +749,56 @@ router.patch("/variants/:id", requireOps, async (req, res) => {
   res.json(serializeVariant(updated));
 });
 
+/**
+ * Deleting a pack has to respect what has already been sold. `order_items`
+ * points at a variant without a cascade, so removing a pack that has ever been
+ * ordered would either fail on the constraint or destroy the record of what a
+ * customer actually bought. Those are archived instead.
+ *
+ * A pack nobody has ordered — the mistyped one an admin created a minute ago —
+ * is deleted outright, and its cart rows cascade away with it. Archiving that
+ * one is what made the console feel broken: the pack the admin was trying to
+ * get rid of stayed on the list for ever, just greyed out.
+ */
 router.delete("/variants/:id", requireOps, async (req, res) => {
-  const [updated] = await db
-    .update(productVariants)
-    .set({ isActive: false })
-    .where(eq(productVariants.id, String(req.params.id)))
-    .returning();
-  if (!updated) throw notFound("That pack does not exist.");
-  res.json({ ok: true });
+  const id = String(req.params.id);
+
+  const outcome = await db.transaction(async (tx) => {
+    // The check and the delete have to be one indivisible step, or a checkout
+    // landing between them turns "archive it" into a foreign-key crash.
+    //
+    // `FOR UPDATE` is what makes that safe. Inserting an order_items row takes
+    // a KEY SHARE lock on the pack it references, and KEY SHARE conflicts with
+    // FOR UPDATE — so a checkout already in flight must commit before this
+    // transaction reads (and is then seen below, giving an archive), and one
+    // arriving later must wait for this transaction to finish.
+    const [variant] = await tx
+      .select({ id: productVariants.id })
+      .from(productVariants)
+      .where(eq(productVariants.id, id))
+      .for("update");
+    if (!variant) return null;
+
+    const [ordered] = await tx
+      .select({ id: orderItems.id })
+      .from(orderItems)
+      .where(eq(orderItems.variantId, id))
+      .limit(1);
+
+    if (ordered) {
+      await tx
+        .update(productVariants)
+        .set({ isActive: false })
+        .where(eq(productVariants.id, id));
+      return { deleted: false };
+    }
+
+    await tx.delete(productVariants).where(eq(productVariants.id, id));
+    return { deleted: true };
+  });
+
+  if (!outcome) throw notFound("That pack does not exist.");
+  res.json({ ok: true, deleted: outcome.deleted });
 });
 
 /* ------------------------------- inventory -------------------------------- */
