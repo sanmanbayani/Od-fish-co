@@ -1,6 +1,6 @@
 ---
 name: Codegen and build traps
-description: Two recurring time sinks in this monorepo — generated query hooks needing explicit queryKeys, and cross-package errors that are really stale lib builds.
+description: Recurring time sinks in this monorepo — generated query hooks needing explicit queryKeys, cross-package errors that are really stale lib builds, silent spec drift, and the error body arriving on ApiError.data.
 ---
 
 # Generated query hooks need an explicit queryKey
@@ -33,3 +33,21 @@ generated client is type-correct, it is just calling a method the server never r
 
 **How to apply:** when a console action 404s but the handler clearly exists, diff the verb
 and path against the spec before debugging anything else.
+
+# The server's error sentence arrives on `.data`, not on the error
+
+The API answers failures with `{ error, code }`. The generated client wraps every failure in
+an `ApiError` whose **`.data`** holds that parsed body. `err.error` is therefore always
+`undefined`, and a handler written as `err.error || "Unknown error"` silently shows its own
+fallback for every refusal the server took care to explain.
+
+**Why it matters:** this is invisible in review and in typecheck — `onError: (err: any)`
+accepts anything — and it looks exactly like a server bug. A precise 400 (`rider_required`,
+`illegal_transition`, `handover_required`) reaches the desk as "Unknown error", so the person
+testing concludes the product is broken when the rule was working as designed.
+
+**How to apply:** never read fields off a caught request error directly. Route every failure
+through `apiErrorMessage(err, fallback)` in the web app's `lib/api-error.ts`, which reads only
+the contract's own `error` field — a proxy's HTML page or an upstream's internal `message`
+must fall back rather than reach a staff screen. When a rule refuses an action the UI offers,
+also disable the control and say why, so the refusal is visible before the click, not after.

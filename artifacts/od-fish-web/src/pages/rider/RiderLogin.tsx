@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
+import { apiErrorMessage } from "@/lib/api-error";
 
 const LOGO = `${import.meta.env.BASE_URL}brand/od-fish-logo.png`;
 
@@ -36,7 +37,7 @@ export default function RiderLogin() {
           window.location.href = `${import.meta.env.BASE_URL}rider`;
         },
         onError: (err: any) => {
-          setErrorMsg(err?.error || "Login failed. Check your email and password.");
+          setErrorMsg(apiErrorMessage(err, "Login failed. Check your email and password."));
         },
       },
     );

@@ -22,6 +22,7 @@ import { mediaUrl } from "@/lib/api-config";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Search, Filter, Plus, Image as ImageIcon, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiErrorMessage } from "@/lib/api-error";
 import { useQueryClient } from "@tanstack/react-query";
 
 type ProductForm = {
@@ -44,7 +45,7 @@ const emptyVariant = (): VariantForm => ({
   lowStockAt: "5", isActive: true,
 });
 const optionalInt = (value: string) => value === "" ? undefined : Number.parseInt(value, 10);
-const errorMessage = (error: unknown) => (error as { error?: string })?.error || "Please try again.";
+const errorMessage = (error: unknown) => apiErrorMessage(error, "Please try again.");
 
 export default function AdminProducts() {
   const [search, setSearch] = useState("");

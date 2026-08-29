@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useAdminLogin } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
+import { apiErrorMessage } from "@/lib/api-error";
 import { useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,7 @@ export default function AdminLogin() {
           window.location.href = `${import.meta.env.BASE_URL}admin`;
         },
         onError: (err: any) => {
-          setErrorMsg(err?.error || "Login failed. Please check your credentials.");
+          setErrorMsg(apiErrorMessage(err, "Login failed. Please check your credentials."));
         },
       },
     );

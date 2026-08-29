@@ -20,6 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Clock, MapPin, Phone, User, Package, FileText, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiErrorMessage } from "@/lib/api-error";
 import { mediaUrl } from "@/lib/api-config";
 
 export default function AdminOrderDetails() {
@@ -62,7 +63,7 @@ export default function AdminOrderDetails() {
         queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard"] });
       },
       onError: (err: any) => {
-        toast({ title: "Failed to update", description: err.error || "Unknown error", variant: "destructive" });
+        toast({ title: "Failed to update", description: apiErrorMessage(err, "Could not update the order. Please try again."), variant: "destructive" });
       }
     });
   };
@@ -75,7 +76,7 @@ export default function AdminOrderDetails() {
         queryClient.invalidateQueries({ queryKey: getGetAdminOrderQueryKey(id!) });
       },
       onError: (err: any) => {
-        toast({ title: "Failed to assign", description: err.error || "Unknown error", variant: "destructive" });
+        toast({ title: "Failed to assign", description: apiErrorMessage(err, "Could not assign the rider. Please try again."), variant: "destructive" });
       }
     });
   };
@@ -212,17 +213,29 @@ export default function AdminOrderDetails() {
                 <div className="space-y-3">
                   <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Update Status</p>
                   <div className="flex flex-col gap-2">
-                    {order.allowedTransitions.map(status => (
-                      <Button 
-                        key={status} 
-                        onClick={() => (status === 'DELIVERED' ? setDeskClose(true) : handleStatusChange(status))}
-                        variant={status === 'CANCELLED' ? 'destructive' : 'default'}
-                        className="w-full justify-start"
-                        disabled={updateStatus.isPending}
-                      >
-                        {status === 'DELIVERED' ? 'Mark delivered (no code)' : `Move to ${status}`}
-                      </Button>
-                    ))}
+                    {order.allowedTransitions.map(status => {
+                      // The server will not send an order out with nobody to carry
+                      // it. Saying so on the button beats a red toast after the tap.
+                      const blocked = status === 'OUT_FOR_DELIVERY' && !order.riderId;
+                      return (
+                        <div key={status} className="space-y-1.5">
+                          <Button
+                            onClick={() => (status === 'DELIVERED' ? setDeskClose(true) : handleStatusChange(status))}
+                            variant={status === 'CANCELLED' ? 'destructive' : 'default'}
+                            className="w-full justify-start"
+                            disabled={updateStatus.isPending || blocked}
+                            data-testid={`button-status-${status}`}
+                          >
+                            {status === 'DELIVERED' ? 'Mark delivered (no code)' : `Move to ${status}`}
+                          </Button>
+                          {blocked && (
+                            <p className="text-xs text-muted-foreground" data-testid="text-rider-required">
+                              Pick a rider below first — an order cannot go out without one.
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
@@ -298,7 +311,7 @@ export default function AdminOrderDetails() {
                             queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard"] });
                           },
                           onError: (err: any) => {
-                            toast({ title: "Could not bank the cash", description: err.error || "Unknown error", variant: "destructive" });
+                            toast({ title: "Could not bank the cash", description: apiErrorMessage(err, "Could not record the cash. Please try again."), variant: "destructive" });
                           },
                         },
                       )

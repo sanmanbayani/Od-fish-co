@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Search, Save, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiErrorMessage } from "@/lib/api-error";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function AdminInventory() {
@@ -51,7 +52,7 @@ export default function AdminInventory() {
         queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard"] });
       },
       onError: (err: any) => {
-        toast({ title: "Failed to update", description: err.error || "Unknown error", variant: "destructive" });
+        toast({ title: "Failed to update", description: apiErrorMessage(err, "Could not save the change. Please try again."), variant: "destructive" });
       }
     });
   };

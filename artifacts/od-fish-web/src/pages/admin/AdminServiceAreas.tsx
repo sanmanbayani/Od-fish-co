@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiErrorMessage } from "@/lib/api-error";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function AdminServiceAreas() {
@@ -33,17 +34,20 @@ export default function AdminServiceAreas() {
     }
     createPincode.mutate({ data: { ...form, areaName: form.areaName.trim() } }, {
       onSuccess: () => { toast({ title: editing ? "Service area updated" : "Service area added" }); setOpen(false); refresh(); },
-      onError: (err: unknown) => toast({ title: "Could not save service area", description: (err as { error?: string })?.error || "Please try again.", variant: "destructive" }),
+      onError: (err: unknown) => toast({ title: "Could not save service area", description: apiErrorMessage(err, "Please try again."), variant: "destructive" }),
     });
   };
   const disable = (pin: Pincode) => {
     if (!pin.isActive) {
-      createPincode.mutate({ data: { pincode: pin.pincode, areaName: pin.areaName, codEnabled: pin.codEnabled } }, { onSuccess: refresh });
+      createPincode.mutate({ data: { pincode: pin.pincode, areaName: pin.areaName, codEnabled: pin.codEnabled } }, {
+        onSuccess: refresh,
+        onError: (err: unknown) => toast({ title: "Could not enable service area", description: apiErrorMessage(err, "Please try again."), variant: "destructive" }),
+      });
       return;
     }
     deletePincode.mutate({ pincode: pin.pincode }, {
       onSuccess: () => { toast({ title: "Service area disabled" }); refresh(); },
-      onError: (err: unknown) => toast({ title: "Could not disable service area", description: (err as { error?: string })?.error, variant: "destructive" }),
+      onError: (err: unknown) => toast({ title: "Could not disable service area", description: apiErrorMessage(err, "Please try again."), variant: "destructive" }),
     });
   };
 

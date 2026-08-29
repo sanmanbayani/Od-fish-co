@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { apiErrorMessage } from "@/lib/api-error";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function AdminSettings() {
@@ -47,7 +48,7 @@ export default function AdminSettings() {
         queryClient.invalidateQueries({ queryKey: ["/api/public/summary"] });
       },
       onError: (err: any) => {
-        toast({ title: "Failed to save", description: err.error, variant: "destructive" });
+        toast({ title: "Failed to save", description: apiErrorMessage(err, "Could not save the settings. Please try again."), variant: "destructive" });
       }
     });
   };

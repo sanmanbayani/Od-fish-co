@@ -15,11 +15,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Clock3, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiErrorMessage } from "@/lib/api-error";
 import { useQueryClient } from "@tanstack/react-query";
 
 type SlotForm = { label: string; startTime: string; endTime: string; cutoffTime: string; capacity: string; isOpen: boolean };
 const emptyForm = (): SlotForm => ({ label: "", startTime: "07:00", endTime: "10:00", cutoffTime: "23:00", capacity: "40", isOpen: true });
-const getError = (error: unknown) => (error as { error?: string })?.error || "Please try again.";
+const getError = (error: unknown) => apiErrorMessage(error, "Please try again.");
 
 export default function AdminSlots() {
   const { data: slots, isLoading, error } = useListAdminSlots({ query: { queryKey: ["/api/admin/slots"] } });

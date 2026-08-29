@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { MapPin, Phone, Package, ArrowLeft, CheckCircle2, AlertTriangle, ShieldCheck } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { apiErrorMessage } from "@/lib/api-error";
 
 export default function RiderOrderDetails() {
   const { id } = useParams<{ id: string }>();
@@ -39,6 +40,9 @@ export default function RiderOrderDetails() {
       onSuccess: () => {
         toast({ title: "Delivery Started" });
         queryClient.invalidateQueries({ queryKey: ["/api/rider/orders"] });
+      },
+      onError: (err: any) => {
+        toast({ title: "Could not start the delivery", description: apiErrorMessage(err, "Please try again."), variant: "destructive" });
       }
     });
   };
@@ -59,7 +63,7 @@ export default function RiderOrderDetails() {
         queryClient.invalidateQueries({ queryKey: ["/api/rider/orders"] });
       },
       onError: (err: any) => {
-        toast({ title: "Invalid OTP", description: err.error || "Please try again.", variant: "destructive" });
+        toast({ title: "Could not confirm delivery", description: apiErrorMessage(err, "Please try again."), variant: "destructive" });
       }
     });
   };
@@ -70,6 +74,9 @@ export default function RiderOrderDetails() {
         onSuccess: () => {
           toast({ title: "Reported Unreachable" });
           queryClient.invalidateQueries({ queryKey: ["/api/rider/orders"] });
+        },
+        onError: (err: any) => {
+          toast({ title: "Could not report the customer", description: apiErrorMessage(err, "Please try again."), variant: "destructive" });
         }
       });
     }
