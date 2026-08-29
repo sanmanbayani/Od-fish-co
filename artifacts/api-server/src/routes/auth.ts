@@ -11,7 +11,7 @@ import {
   issueCustomerSession,
   requireCustomer,
 } from "../middlewares/auth";
-import { IS_DEVELOPMENT } from "../lib/env";
+import { AUTH_MOCK_ENABLED, AUTH_MOCK_OTP, IS_DEVELOPMENT } from "../lib/env";
 import {
   badRequest,
   serviceUnavailable,
@@ -72,14 +72,17 @@ router.post("/auth/otp/request", async (req, res) => {
     throw tooManyRequests("Please wait a few seconds before asking for a new code.");
   }
 
-  if (!SMS_DELIVERY_IMPLEMENTED && !IS_DEVELOPMENT) {
+  if (!SMS_DELIVERY_IMPLEMENTED && !IS_DEVELOPMENT && !AUTH_MOCK_ENABLED) {
     throw serviceUnavailable(
       "Sign-in by SMS is not switched on yet. Please contact support.",
       "sms_not_configured",
     );
   }
 
-  const code = numericCode(6);
+  // With the mock on, every challenge carries the one operator-chosen code. The
+  // surrounding expiry, attempt-limit and resend rules are untouched, so the
+  // real flow is what gets exercised — only the secret is shared.
+  const code = AUTH_MOCK_ENABLED ? AUTH_MOCK_OTP! : numericCode(6);
   const expiresAt = new Date(Date.now() + OTP_TTL_MS);
 
   await db.delete(otpChallenges).where(eq(otpChallenges.phone, phone));
@@ -98,13 +101,19 @@ router.post("/auth/otp/request", async (req, res) => {
     }
   }
 
-  req.log.info({ phone: maskPhone(phone), delivered }, "Issued login OTP");
+  req.log.info(
+    { phone: maskPhone(phone), delivered, mockAuth: AUTH_MOCK_ENABLED },
+    "Issued login OTP",
+  );
 
   res.json({
     phone,
     expiresInSeconds: Math.floor(OTP_TTL_MS / 1000),
     delivered,
+    // Only ever echoed on a non-public environment. Under the mock the caller
+    // is expected to already know the shared code.
     devOtp: IS_DEVELOPMENT ? code : null,
+    mockAuth: AUTH_MOCK_ENABLED,
   });
 });
 

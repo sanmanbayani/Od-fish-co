@@ -15,4 +15,6 @@ export interface OtpChallenge {
      * @nullable
      */
   devOtp?: string | null;
+  /** True when the server is accepting a shared demo login code instead of sending a real SMS. Clients should show a visible notice so nobody mistakes a demo environment for the live one. */
+  mockAuth?: boolean;
 }

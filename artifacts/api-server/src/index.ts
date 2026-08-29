@@ -1,4 +1,5 @@
 import app from "./app";
+import { describeMocks } from "./lib/env";
 import { logger } from "./lib/logger";
 
 const rawPort = process.env["PORT"];
@@ -22,4 +23,10 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // A mock left switched on is the kind of thing that survives to launch
+  // precisely because it is silent. Say it loudly, every boot.
+  for (const note of describeMocks()) {
+    logger.warn(note);
+  }
 });

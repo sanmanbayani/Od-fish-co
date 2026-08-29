@@ -147,7 +147,8 @@ export const RequestOtpResponse = zod.object({
   "phone": zod.string(),
   "expiresInSeconds": zod.number().int(),
   "delivered": zod.boolean(),
-  "devOtp": zod.string().nullish().describe('Present only while no SMS provider is configured, so the flow is testable')
+  "devOtp": zod.string().nullish().describe('Present only while no SMS provider is configured, so the flow is testable'),
+  "mockAuth": zod.boolean().optional().describe('True when the server is accepting a shared demo login code instead of sending a real SMS. Clients should show a visible notice so nobody mistakes a demo environment for the live one.')
 })
 
 

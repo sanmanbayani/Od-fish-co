@@ -12,7 +12,7 @@ import {
 } from "@workspace/db";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
-import { IS_DEVELOPMENT } from "../lib/env";
+import { IS_DEVELOPMENT, PAYMENTS_MOCK_ENABLED } from "../lib/env";
 import { badRequest, conflict, notFound, notImplemented, parseBody } from "../lib/http";
 import {
   customerCanCancel,
@@ -255,12 +255,15 @@ router.get("/:id", async (req, res) => {
  *
  * A real gateway tells US the payment succeeded, over a signed server-to-server
  * webhook. It is never the buyer's word. Until that gateway is wired (blocked on
- * KYC) this endpoint stands in for it, and it exists ONLY in development — on
- * any other environment a customer marking their own order paid is a free
- * checkout, so we refuse rather than degrade.
+ * KYC) this endpoint stands in for it.
+ *
+ * It is therefore available only in development, or on an environment that has
+ * deliberately set `PAYMENTS_MOCK=true` for a demo. Anywhere else a customer
+ * marking their own order paid is a free checkout, so we refuse rather than
+ * degrade.
  */
 router.post("/:id/pay", async (req, res) => {
-  if (!IS_DEVELOPMENT) {
+  if (!IS_DEVELOPMENT && !PAYMENTS_MOCK_ENABLED) {
     throw notImplemented(
       "Online payment is not switched on yet. Please choose cash on delivery.",
       "gateway_not_configured",

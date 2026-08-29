@@ -25,6 +25,7 @@ export default function LoginScreen() {
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [error, setError] = useState<string | null>(null);
   const [devOtp, setDevOtp] = useState<string | null>(null);
+  const [mockAuth, setMockAuth] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -65,6 +66,7 @@ export default function LoginScreen() {
     try {
       const challenge = await requestOtp.mutateAsync({ data: { phone } });
       setDevOtp(challenge.devOtp ?? null);
+      setMockAuth(Boolean(challenge.mockAuth));
       setStep('otp');
       startCountdown(challenge.expiresInSeconds || 300);
     } catch (err) {
@@ -184,6 +186,19 @@ export default function LoginScreen() {
                       {devOtp}
                     </Text>
                     .
+                  </Text>
+                </View>
+              ) : mockAuth ? (
+                <View
+                  style={[
+                    styles.devHint,
+                    { backgroundColor: colors.accent, borderRadius: radii.md },
+                  ]}
+                >
+                  <Feather name="info" size={13} color={colors.mutedForeground} />
+                  <Text variant="small" tone="muted" style={styles.flex}>
+                    Demo sign-in is switched on — enter the shared demo code. Real
+                    SMS goes live once mobile-number registration clears.
                   </Text>
                 </View>
               ) : null}

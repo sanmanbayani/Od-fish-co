@@ -14,7 +14,9 @@ complete OTP-confirmed doorstep handovers.
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run seed` — reseed catalogue, slots, pincodes, staff
-- Required env: `DATABASE_URL` (Postgres connection string), `SESSION_SECRET`
+- Required env: `DATABASE_URL` (Postgres connection string), `SESSION_SECRET`, and an
+  explicit `NODE_ENV`. See `.env.example` for the full list including the temporary
+  demo mocks (`AUTH_MOCK_OTP`, `PAYMENTS_MOCK`) and database TLS settings.
 
 Each surface runs as its own workflow. Restart the matching workflow after changing that
 package.
@@ -91,13 +93,24 @@ package.
   check that never fires.
 - **Expo imports the API config module first** in the root layout. Move it and early
   requests go out unauthenticated.
-- **Payments and SMS are in test mode, and both fail closed in production.** In development
+- **Payments and SMS are in test mode, and both fail closed by default.** In development
   login OTPs come back in the API response and prepaid orders settle against a stand-in
-  endpoint. With `NODE_ENV=production` and no provider configured, OTP requests return
-  `sms_not_configured` and the settlement route returns `gateway_not_configured` rather
-  than degrading to the insecure path. Going live needs DLT/TRAI SMS registration
-  (`SMS_PROVIDER=live`) and payment-gateway KYC, which itself requires four policy pages
-  published first. Wire the gateway as a signed webhook — never as a customer-callable route.
+  endpoint. On any other environment, with no provider and no mock configured, OTP
+  requests return `sms_not_configured` and the settlement route returns
+  `gateway_not_configured` rather than degrading to the insecure path. Going live needs
+  DLT/TRAI SMS registration and payment-gateway KYC, which itself requires four policy
+  pages published first. Wire the gateway as a signed webhook — never as a
+  customer-callable route.
+- **The demo mocks are opt-in and must not reach launch.** `AUTH_MOCK_OTP` (a 6-digit
+  shared code that signs in *any* phone number) and `PAYMENTS_MOCK` (marks prepaid orders
+  paid with no money moving) exist so the product is demoable before those registrations
+  clear. They are two separate flags on purpose: demo logins should not silently also
+  mean free checkout. The API logs a warning on every boot while either is set, and the
+  mobile login screen shows a notice. Unset both before real customers.
+- **Gating is by allow-list, never by absence.** `IS_DEVELOPMENT` names the safe
+  environments (`development`, `test`); anything else — including an unset `NODE_ENV` —
+  counts as public. Never reintroduce a `NODE_ENV !== "production"` check; it fails open
+  on the first deploy that forgets the variable.
 - **The handover OTP is customer-only.** It is deliberately absent from every staff-facing
   serializer and compared server-side at the door. Do not add it to an admin or rider
   payload "for convenience".
