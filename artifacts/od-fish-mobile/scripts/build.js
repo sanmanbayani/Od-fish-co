@@ -57,16 +57,21 @@ function stripProtocol(domain) {
 }
 
 function getDeploymentDomain() {
+  // EXPO_PUBLIC_DOMAIN is checked FIRST because it is the only one of these a
+  // human sets deliberately. The Replit domains are ambient — they are present
+  // in every shell inside the workspace — so checking them first meant a build
+  // run here could never target the real API host, and would bake in a
+  // development URL that stops resolving the moment the workspace sleeps.
+  if (process.env.EXPO_PUBLIC_DOMAIN) {
+    return stripProtocol(process.env.EXPO_PUBLIC_DOMAIN);
+  }
+
   if (process.env.REPLIT_INTERNAL_APP_DOMAIN) {
     return stripProtocol(process.env.REPLIT_INTERNAL_APP_DOMAIN);
   }
 
   if (process.env.REPLIT_DEV_DOMAIN) {
     return stripProtocol(process.env.REPLIT_DEV_DOMAIN);
-  }
-
-  if (process.env.EXPO_PUBLIC_DOMAIN) {
-    return stripProtocol(process.env.EXPO_PUBLIC_DOMAIN);
   }
 
   console.error(
