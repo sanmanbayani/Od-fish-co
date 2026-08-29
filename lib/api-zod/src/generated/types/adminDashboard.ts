@@ -15,10 +15,14 @@ export interface AdminDashboard {
   storeOpen: boolean;
   ordersToday: number;
   revenueTodayPaise: number;
+  ordersPlacedToday: number;
+  revenuePlacedTodayPaise: number;
   averageOrderValuePaise?: number;
   pendingActionCount: number;
   lowStockCount: number;
   outForDeliveryCount?: number;
+  cashCollectedTodayPaise: number;
+  cashPendingTodayPaise: number;
   statusBreakdown: StatusCount[];
   revenueTrend: RevenuePoint[];
   needsAction: AdminOrder[];

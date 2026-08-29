@@ -51,3 +51,25 @@ lets two requests both pass the same validation and both act.
 (`WHERE id = ? AND status = ?`) and treat "no row updated" as a real, user-visible
 conflict. Serialize checkout on consuming the cart rows themselves, so only one request can
 turn a basket into an order.
+
+Ownership is part of that pin, not a separate check. Reading "this order belongs to this
+rider" before the transaction leaves a window in which the desk reassigns it; carry the
+owner into the `WHERE` clause of the write itself, or the previous rider still takes the box
+out and the audit trail names the wrong person.
+
+# Only two doors reach DELIVERED
+
+A delivery closes either by the rider verifying the customer's handover code, or by staff
+closing it at the desk with a written reason recorded against them. There is no third path,
+and neither one accepts an amount of money from the caller.
+
+**Why:** a plain "set status to DELIVERED" control is indistinguishable from a real delivery
+once it is in the books. It was the one route that could mark a cash order paid while no
+money had been recorded, so the day's takings and the cash actually in the tin drifted apart
+with nothing to show for it.
+
+**How to apply:** any route that can reach DELIVERED, set payment to paid, or write the cash
+fields must derive the amount from the order's own total and leave an order event naming the
+actor. A cash order closed without the money stays unpaid on purpose — "delivered but owing"
+is a real state, which means it also needs a way to be settled later, or it becomes an order
+nobody can ever reconcile.

@@ -2631,6 +2631,77 @@ export const useUpdateAdminOrderStatus = <TError = ErrorType<ErrorResult>,
       return useMutation(getUpdateAdminOrderStatusMutationOptions(options));
     }
 
+export const getRecordOrderCashUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/orders/${id}/record-cash`
+}
+
+/**
+ * @summary Bank cash for a delivered order that is still owing
+ */
+export const recordOrderCash = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<AdminOrder> => {
+
+  return customFetch<AdminOrder>(getRecordOrderCashUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRecordOrderCashMutationOptions = <TError = ErrorType<ErrorResult>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordOrderCash>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordOrderCash>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['recordOrderCash'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordOrderCash>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  recordOrderCash(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordOrderCashMutationResult = NonNullable<Awaited<ReturnType<typeof recordOrderCash>>>
+
+    export type RecordOrderCashMutationError = ErrorType<ErrorResult>
+
+    /**
+ * @summary Bank cash for a delivered order that is still owing
+ */
+export const useRecordOrderCash = <TError = ErrorType<ErrorResult>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordOrderCash>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordOrderCash>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getRecordOrderCashMutationOptions(options));
+    }
+
 export const getAssignRiderUrl = (id: string,) => {
 
 
@@ -4275,6 +4346,77 @@ export const useVerifyDeliveryOtp = <TError = ErrorType<ErrorResult>,
         TContext
       > => {
       return useMutation(getVerifyDeliveryOtpMutationOptions(options));
+    }
+
+export const getStartRiderDeliveryUrl = (id: string,) => {
+
+
+
+
+  return `/api/rider/orders/${id}/start`
+}
+
+/**
+ * @summary Rider sets out with an order assigned to them
+ */
+export const startRiderDelivery = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<RiderOrder> => {
+
+  return customFetch<RiderOrder>(getStartRiderDeliveryUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getStartRiderDeliveryMutationOptions = <TError = ErrorType<ErrorResult>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startRiderDelivery>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startRiderDelivery>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['startRiderDelivery'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startRiderDelivery>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  startRiderDelivery(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartRiderDeliveryMutationResult = NonNullable<Awaited<ReturnType<typeof startRiderDelivery>>>
+
+    export type StartRiderDeliveryMutationError = ErrorType<ErrorResult>
+
+    /**
+ * @summary Rider sets out with an order assigned to them
+ */
+export const useStartRiderDelivery = <TError = ErrorType<ErrorResult>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startRiderDelivery>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof startRiderDelivery>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getStartRiderDeliveryMutationOptions(options));
     }
 
 export const getReportUnreachableUrl = (id: string,) => {

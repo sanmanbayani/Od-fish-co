@@ -694,6 +694,32 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResult"
 
+  /admin/orders/{id}/record-cash:
+    post:
+      operationId: recordOrderCash
+      tags: [admin]
+      # DELIVERED is terminal, so a delivery closed at the desk without the
+      # money needs a way to be settled when the cash does arrive.
+      summary: Bank cash for a delivered order that is still owing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Settled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminOrder"
+        "409":
+          description: Not settleable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
+
   /admin/orders/{id}/assign-rider:
     post:
       operationId: assignRider
@@ -1136,6 +1162,32 @@ paths:
                 $ref: "#/components/schemas/ErrorResult"
         "423":
           description: Locked after too many attempts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
+
+  /rider/orders/{id}/start:
+    post:
+      operationId: startRiderDelivery
+      tags: [rider]
+      # Riders cannot use the ops status endpoint - it refuses their role - so
+      # setting out needs a route of its own, scoped to their own assignments.
+      summary: Rider sets out with an order assigned to them
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Out for delivery
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiderOrder"
+        "409":
+          description: Not ready to leave the counter
           content:
             application/json:
               schema:
@@ -1815,8 +1867,12 @@ components:
         [
           ordersToday,
           revenueTodayPaise,
+          ordersPlacedToday,
+          revenuePlacedTodayPaise,
           pendingActionCount,
           lowStockCount,
+          cashCollectedTodayPaise,
+          cashPendingTodayPaise,
           statusBreakdown,
           revenueTrend,
           needsAction,
@@ -1826,12 +1882,21 @@ components:
         ]
       properties:
         storeOpen: { type: boolean }
+        # What is going out today, keyed on delivery date.
         ordersToday: { type: integer }
         revenueTodayPaise: { type: integer }
+        # What came in today, keyed on order time. A shop that takes orders all
+        # day for tomorrow morning would otherwise read zero business at 6 PM.
+        ordersPlacedToday: { type: integer }
+        revenuePlacedTodayPaise: { type: integer }
         averageOrderValuePaise: { type: integer }
         pendingActionCount: { type: integer }
         lowStockCount: { type: integer }
         outForDeliveryCount: { type: integer }
+        # COD reconciliation for the day: what riders have handed in, and what
+        # is still out on the road.
+        cashCollectedTodayPaise: { type: integer }
+        cashPendingTodayPaise: { type: integer }
         statusBreakdown:
           type: array
           items:
@@ -1904,6 +1969,8 @@ components:
         customerNote: { type: ["string", "null"] }
         cancellationReason: { type: ["string", "null"] }
         flaggedUnreachable: { type: boolean }
+        cashCollectedPaise: { type: ["integer", "null"] }
+        cashCollectedAt: { type: ["string", "null"] }
         allowedTransitions:
           type: array
           items: { type: string }
@@ -1931,6 +1998,14 @@ components:
               FAILED,
             ]
         note: { type: string }
+        # A delivery is normally completed on the rider's screen with the
+        # customer's handover code. Closing one from the desk skips that
+        # proof, so it must be stated in writing and is recorded against the
+        # staff member who did it.
+        overrideReason: { type: string, minLength: 5 }
+        # Whether the money actually came in on a cash order closed this way.
+        # Without it the order is delivered but still owing.
+        cashCollected: { type: boolean }
 
     RiderAssignmentInput:
       type: object
@@ -2116,6 +2191,7 @@ components:
         itemCount: { type: integer }
         totalPaise: { type: integer }
         collectCashPaise: { type: integer }
+        cashCollectedPaise: { type: ["integer", "null"] }
         otpAttemptsRemaining: { type: integer }
         flaggedUnreachable: { type: boolean }
         deliveredAt: { type: ["string", "null"] }
@@ -2129,6 +2205,10 @@ components:
       required: [otp]
       properties:
         otp: { type: string, minLength: 4, maxLength: 4 }
+        # A cash order cannot be closed at the door until the rider confirms the
+        # money is in hand. The amount is never accepted from the client — the
+        # server stamps the total it already computed.
+        cashCollected: { type: boolean }
 
     # ------------------------------------------------------------ PUBLIC
     ServiceArea:

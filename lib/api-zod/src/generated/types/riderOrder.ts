@@ -19,6 +19,8 @@ export interface RiderOrder {
   itemCount: number;
   totalPaise: number;
   collectCashPaise: number;
+  /** @nullable */
+  cashCollectedPaise?: number | null;
   otpAttemptsRemaining: number;
   flaggedUnreachable: boolean;
   /** @nullable */

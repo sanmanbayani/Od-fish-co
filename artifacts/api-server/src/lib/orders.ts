@@ -221,6 +221,10 @@ export function serializeAdminOrder(
     customerNote: order.customerNote,
     cancellationReason: order.cancellationReason,
     flaggedUnreachable: order.flaggedUnreachable,
+    cashCollectedPaise: order.cashCollectedPaise,
+    cashCollectedAt: order.cashCollectedAt
+      ? order.cashCollectedAt.toISOString()
+      : null,
     allowedTransitions: ORDER_TRANSITIONS[order.status],
     events: bundle.events.map(serializeEvent),
     createdAt: order.createdAt.toISOString(),
@@ -248,6 +252,7 @@ export function serializeRiderOrder(
       order.paymentMethod === "COD" && order.paymentStatus !== "PAID"
         ? order.totalPaise
         : 0,
+    cashCollectedPaise: order.cashCollectedPaise,
     otpAttemptsRemaining: Math.max(0, maxOtpAttempts - order.otpAttempts),
     flaggedUnreachable: order.flaggedUnreachable,
     deliveredAt: order.deliveredAt ? order.deliveredAt.toISOString() : null,

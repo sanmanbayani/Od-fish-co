@@ -32,9 +32,12 @@ export default function OrdersScreen() {
     query: { queryKey: ['orders'], enabled: isSignedIn },
   });
 
+  // Keep the header mounted while the stored session is read, otherwise the
+  // tab opens as an empty screen and only grows its title a beat later.
   if (!isReady) {
     return (
-      <Screen top>
+      <Screen>
+        <Header insetTop={insets.top} />
         <LoadingView />
       </Screen>
     );

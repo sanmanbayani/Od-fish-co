@@ -55,6 +55,10 @@ import { restoreStock } from "./orders";
 
 const router: IRouter = Router();
 
+/** Rupees for an audit note: ₹1,861 - and ₹1,861.50 only when it matters. */
+const rupeesOf = (paise: number) =>
+  `₹${(paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+
 type StaffRow = typeof staff.$inferSelect;
 
 function serializeStaff(row: StaffRow, deliveriesToday = 0) {
@@ -117,10 +121,12 @@ router.get("/dashboard", requireOps, async (_req, res) => {
   const [
     statusRows,
     todayRows,
+    placedTodayRows,
     trendRows,
     lowStockRows,
     slotRows,
     activeOrderRows,
+    cashRows,
   ] = await Promise.all([
     db
       .select({ status: orders.status, count: sql<number>`count(*)::int` })
@@ -136,6 +142,21 @@ router.get("/dashboard", requireOps, async (_req, res) => {
         and(
           gte(orders.deliveryDate, today),
           lte(orders.deliveryDate, today),
+          sql`${orders.status} not in ('CANCELLED', 'FAILED')`,
+        ),
+      ),
+    // What actually came in today, keyed on when the order was placed. That is
+    // the question the owner is really asking; the delivery figures describe a
+    // different day's work and the two are rarely the same number.
+    db
+      .select({
+        count: sql<number>`count(*)::int`,
+        revenue: sql<number>`coalesce(sum(${orders.totalPaise}), 0)::int`,
+      })
+      .from(orders)
+      .where(
+        and(
+          sql`to_char(${orders.createdAt} at time zone 'Asia/Kolkata', 'YYYY-MM-DD') = ${today}`,
           sql`${orders.status} not in ('CANCELLED', 'FAILED')`,
         ),
       ),
@@ -165,8 +186,7 @@ router.get("/dashboard", requireOps, async (_req, res) => {
           sql`${productVariants.stockQty} <= ${productVariants.lowStockAt}`,
         ),
       )
-      .orderBy(asc(productVariants.stockQty))
-      .limit(12),
+      .orderBy(asc(productVariants.stockQty)),
     db
       .select()
       .from(deliverySlots)
@@ -178,6 +198,28 @@ router.get("/dashboard", requireOps, async (_req, res) => {
       .where(sql`${orders.status} in ('PLACED', 'CONFIRMED', 'PACKED')`)
       .orderBy(asc(orders.createdAt))
       .limit(10),
+    // Today's cash position. Collected is keyed on when the money changed
+    // hands, not on the delivery date — an order placed today for tomorrow is
+    // still cash the counter has to account for on the day it arrives.
+    // Pending is keyed on the delivery date, because that is the run the money
+    // is expected from.
+    db
+      .select({
+        collected: sql<number>`coalesce(sum(${orders.cashCollectedPaise}) filter (
+          where to_char(${orders.cashCollectedAt} at time zone 'Asia/Kolkata', 'YYYY-MM-DD') = ${today}
+        ), 0)::int`,
+        pending: sql<number>`coalesce(sum(${orders.totalPaise}) filter (
+          where ${orders.deliveryDate} = ${today}
+            and ${orders.paymentMethod} = 'COD'
+            and ${orders.paymentStatus} <> 'PAID'
+            and ${orders.status} not in ('CANCELLED', 'FAILED')
+        ), 0)::int`,
+      })
+      .from(orders)
+      .where(
+        sql`${orders.deliveryDate} = ${today}
+          or to_char(${orders.cashCollectedAt} at time zone 'Asia/Kolkata', 'YYYY-MM-DD') = ${today}`,
+      ),
   ]);
 
   const needsActionBundles = await loadOrderBundles(activeOrderRows);
@@ -249,6 +291,16 @@ router.get("/dashboard", requireOps, async (_req, res) => {
 
   const ordersToday = todayRows[0]?.count ?? 0;
   const revenueTodayPaise = todayRows[0]?.revenue ?? 0;
+  const ordersPlacedToday = placedTodayRows[0]?.count ?? 0;
+  const revenuePlacedTodayPaise = placedTodayRows[0]?.revenue ?? 0;
+
+  // Counted from the status breakdown rather than from the needs-action list,
+  // which is capped at ten rows. On a busy morning that cap would quietly
+  // under-report the backlog the tile exists to warn about.
+  const backlogStatuses = new Set(["PLACED", "CONFIRMED", "PACKED"]);
+  const pendingActionCount = statusRows
+    .filter((row) => backlogStatuses.has(row.status))
+    .reduce((sum, row) => sum + row.count, 0);
   const outForDeliveryCount =
     statusRows.find((row) => row.status === "OUT_FOR_DELIVERY")?.count ?? 0;
 
@@ -256,10 +308,14 @@ router.get("/dashboard", requireOps, async (_req, res) => {
     storeOpen: settings.storeOpen,
     ordersToday,
     revenueTodayPaise,
+    ordersPlacedToday,
+    revenuePlacedTodayPaise,
     averageOrderValuePaise: ordersToday > 0 ? Math.round(revenueTodayPaise / ordersToday) : 0,
-    pendingActionCount: activeOrderRows.length,
+    pendingActionCount,
     lowStockCount: lowStockRows.length,
     outForDeliveryCount,
+    cashCollectedTodayPaise: cashRows[0]?.collected ?? 0,
+    cashPendingTodayPaise: cashRows[0]?.pending ?? 0,
     statusBreakdown,
     revenueTrend,
     needsAction: needsActionBundles.map((bundle) =>
@@ -268,7 +324,7 @@ router.get("/dashboard", requireOps, async (_req, res) => {
         phone: customerById.get(bundle.order.customerId)?.phone ?? "",
       }),
     ),
-    lowStock: lowStockRows.map((row) => serializeInventoryRow(row)),
+    lowStock: lowStockRows.slice(0, 12).map((row) => serializeInventoryRow(row)),
     slotLoad: slotWindow.map((slot) => ({
       slotId: slot.id,
       deliveryDate: slot.deliveryDate,
@@ -368,6 +424,25 @@ router.post("/orders/:id/status", requireOps, async (req, res) => {
     throw badRequest("Assign a rider before sending this order out.", "rider_required");
   }
 
+  // The customer's handover code is the proof that the order arrived, and on a
+  // cash order it is also what puts the money on the books. Closing an order
+  // from the desk skips both, so it stays possible - a rider's phone does die -
+  // but only as a written exception, never as a button tapped out of habit.
+  const overrideReason = body.overrideReason?.trim() ?? "";
+  if (next === "DELIVERED" && overrideReason.length < 5) {
+    throw badRequest(
+      "Deliveries are completed on the rider's screen with the customer's handover code. To close this one from here, give a reason.",
+      "handover_required",
+    );
+  }
+
+  // Cash counts only when someone says it came in. A desk-closed cash order
+  // with nothing confirmed stays unpaid, so the day's takings never gain money
+  // that nobody is holding.
+  const collectsCash = row.paymentMethod === "COD" && row.paymentStatus !== "PAID";
+  const cashCameIn = collectsCash && body.cashCollected === true;
+
+
   // Two ops staff on the same order is normal in a busy kitchen. Pinning the
   // update to the status we validated means the second one is told to refresh
   // instead of silently overwriting the first, and stock is only ever restored
@@ -380,7 +455,16 @@ router.post("/orders/:id/status", requireOps, async (req, res) => {
         ...(next === "DELIVERED"
           ? {
               deliveredAt: new Date(),
-              paymentStatus: "PAID" as const,
+              ...(collectsCash
+                ? cashCameIn
+                  ? {
+                      paymentStatus: "PAID" as const,
+                      // Server's own total, never a number the desk typed.
+                      cashCollectedPaise: row.totalPaise,
+                      cashCollectedAt: new Date(),
+                    }
+                  : {}
+                : { paymentStatus: "PAID" as const }),
             }
           : {}),
         ...(next === "CANCELLED" ? { cancellationReason: body.note ?? "Cancelled by staff" } : {}),
@@ -404,7 +488,77 @@ router.post("/orders/:id/status", requireOps, async (req, res) => {
         orderId: id,
         fromStatus: row.status,
         toStatus: next,
-        note: body.note ?? null,
+        note:
+          next === "DELIVERED"
+            ? `Closed at the desk without a handover code: ${overrideReason}` +
+              (collectsCash
+                ? cashCameIn
+                  ? ` · ${rupeesOf(row.totalPaise)} cash collected`
+                  : " · cash NOT collected, order still owing"
+                : "")
+            : (body.note ?? null),
+        actorType: "STAFF",
+        actorId: req.staff!.id,
+      },
+      tx,
+    );
+
+    return changed;
+  });
+
+  const [serialized] = await bundleWithCustomers([updated]);
+  res.json(serialized);
+});
+
+/**
+ * Cash that turns up after the delivery closed - typically a desk-closed order
+ * whose rider handed the notes over at the end of the shift. DELIVERED is a
+ * terminal status, so without this the order would sit owing forever.
+ */
+router.post("/orders/:id/record-cash", requireOps, async (req, res) => {
+  const id = String(req.params.id);
+
+  const [row] = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
+  if (!row) throw notFound("That order does not exist.");
+  if (row.status !== "DELIVERED") {
+    throw conflict("Cash is banked once the order has been delivered.", "not_delivered");
+  }
+  if (row.paymentMethod !== "COD") {
+    throw conflict("That order was not a cash order.", "not_cash_order");
+  }
+  if (row.paymentStatus === "PAID") {
+    throw conflict("This order is already settled.", "already_paid");
+  }
+
+  const updated = await db.transaction(async (tx) => {
+    // Pinned to the unpaid state so two people at the desk cannot bank the
+    // same notes twice.
+    const [changed] = await tx
+      .update(orders)
+      .set({
+        paymentStatus: "PAID",
+        cashCollectedPaise: row.totalPaise,
+        cashCollectedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(orders.id, id),
+          eq(orders.status, "DELIVERED"),
+          sql`${orders.paymentStatus} <> 'PAID'`,
+        ),
+      )
+      .returning();
+
+    if (!changed) {
+      throw conflict("Someone else just banked this cash.", "already_paid");
+    }
+
+    await recordOrderEvent(
+      {
+        orderId: id,
+        fromStatus: "DELIVERED",
+        toStatus: "DELIVERED",
+        note: `${rupeesOf(row.totalPaise)} cash banked at the desk`,
         actorType: "STAFF",
         actorId: req.staff!.id,
       },

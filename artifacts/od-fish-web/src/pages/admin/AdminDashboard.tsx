@@ -1,14 +1,59 @@
-import React from "react";
-import { useGetAdminDashboard } from "@workspace/api-client-react";
-import { formatPaise } from "@/lib/format";
-import { 
-  Card, CardContent, CardHeader, CardTitle 
+import { useGetAdminDashboard, getGetAdminDashboardQueryKey } from "@workspace/api-client-react";
+import { formatPaise, formatOnlyDate } from "@/lib/format";
+import {
+  Card, CardContent, CardHeader, CardTitle
 } from "@/components/ui/card";
-import { AlertCircle, IndianRupee, ShoppingBag, PackageOpen, AlertTriangle } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  IndianRupee,
+  PackageOpen,
+  ShoppingBag,
+  Truck,
+  Wallet,
+} from "lucide-react";
 import { Link } from "wouter";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts";
+
+/** Short weekday for the trend axis; the newest column is always "Today". */
+function dayLabel(iso: string, isLast: boolean): string {
+  if (isLast) return "Today";
+  const date = new Date(`${iso}T00:00:00`);
+  return new Intl.DateTimeFormat("en-IN", { weekday: "short" }).format(date);
+}
+
+/** Compact rupees for the chart, where two decimals are noise: ₹4.1k. */
+function compactRupees(paise: number): string {
+  const rupees = paise / 100;
+  if (rupees >= 100000) return `₹${(rupees / 100000).toFixed(1)}L`;
+  if (rupees >= 1000) return `₹${(rupees / 1000).toFixed(1)}k`;
+  return `₹${Math.round(rupees)}`;
+}
+
+function TrendTooltip({ active, payload }: any) {
+  if (!active || !payload?.length) return null;
+  const point = payload[0].payload;
+  return (
+    <div className="rounded-md border bg-popover px-3 py-2 text-xs shadow-md">
+      <div className="font-medium">{formatOnlyDate(point.date)}</div>
+      <div className="text-muted-foreground mt-0.5">
+        {formatPaise(point.revenuePaise)} · {point.orders} {point.orders === 1 ? "order" : "orders"}
+      </div>
+    </div>
+  );
+}
 
 export default function AdminDashboard() {
-  const { data: dashboard, isLoading, error } = useGetAdminDashboard();
+  // The counter is a live surface — someone leaves it open on a screen through
+  // service, so it has to keep up without anyone reloading it.
+  const { data: dashboard, isLoading, error } = useGetAdminDashboard({
+    query: {
+      refetchInterval: 30000,
+      queryKey: getGetAdminDashboardQueryKey(),
+    },
+  });
 
   if (isLoading) {
     return (
@@ -27,6 +72,13 @@ export default function AdminDashboard() {
     );
   }
 
+  const trend = dashboard.revenueTrend ?? [];
+  const trendTotal = trend.reduce((sum, point) => sum + point.revenuePaise, 0);
+  const chartData = trend.map((point, index) => ({
+    ...point,
+    label: dayLabel(point.date, index === trend.length - 1),
+  }));
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between">
@@ -40,51 +92,172 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Top Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="hover-elevate">
+      {/* Two different days are in play at once: what came in today, and what
+          goes out today. Keeping them side by side stops one being read as the
+          other. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <Card className="hover-elevate" data-testid="card-orders-today">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Today's Orders</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Orders Taken Today</CardTitle>
             <ShoppingBag className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboard.ordersToday}</div>
+            <div className="text-2xl font-bold" data-testid="text-orders-placed-today">
+              {dashboard.ordersPlacedToday}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {formatPaise(dashboard.revenuePlacedTodayPaise)} of business
+            </p>
           </CardContent>
         </Card>
-        
-        <Card className="hover-elevate">
+
+        <Card className="hover-elevate" data-testid="card-deliveries-today">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Today's Revenue</CardTitle>
-            <IndianRupee className="w-4 h-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Going Out Today</CardTitle>
+            <Truck className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatPaise(dashboard.revenueTodayPaise)}</div>
-            {dashboard.averageOrderValuePaise && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Avg: {formatPaise(dashboard.averageOrderValuePaise)} / order
-              </p>
+            <div className="text-2xl font-bold" data-testid="text-deliveries-today">
+              {dashboard.ordersToday}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {formatPaise(dashboard.revenueTodayPaise)} to deliver
+              {(dashboard.averageOrderValuePaise ?? 0) > 0
+                ? ` · avg ${formatPaise(dashboard.averageOrderValuePaise)}`
+                : ""}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-elevate" data-testid="card-cash-today">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Cash Collected</CardTitle>
+            <Wallet className="w-4 h-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="text-cash-collected">
+              {formatPaise(dashboard.cashCollectedTodayPaise)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {dashboard.cashPendingTodayPaise > 0
+                ? `${formatPaise(dashboard.cashPendingTodayPaise)} still out with riders`
+                : "All cash accounted for"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card
+          className={`hover-elevate ${dashboard.pendingActionCount > 0 ? 'border-destructive/30 bg-destructive/5' : ''}`}
+          data-testid="card-pending-actions"
+        >
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className={`text-sm font-medium ${dashboard.pendingActionCount > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+              Waiting On You
+            </CardTitle>
+            <AlertTriangle className={`w-4 h-4 ${dashboard.pendingActionCount > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
+          </CardHeader>
+          <CardContent>
+            <div
+              className={`text-2xl font-bold ${dashboard.pendingActionCount > 0 ? 'text-destructive' : ''}`}
+              data-testid="text-pending-actions"
+            >
+              {dashboard.pendingActionCount}
+            </div>
+            <p className={`text-xs mt-1 ${dashboard.pendingActionCount > 0 ? 'text-destructive/80' : 'text-muted-foreground'}`}>
+              {dashboard.pendingActionCount > 0
+                ? "Orders to confirm, pack or send out"
+                : "Nothing waiting"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Last 7 days */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-2">
+            <div className="flex items-baseline justify-between">
+              <CardTitle className="text-lg">Last 7 Days</CardTitle>
+              <span className="text-sm text-muted-foreground">
+                {compactRupees(trendTotal)} delivered
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {trendTotal === 0 ? (
+              <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground">
+                No deliveries in the last seven days yet.
+              </div>
+            ) : (
+              <div className="h-[200px]" data-testid="chart-revenue-trend">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis
+                      dataKey="label"
+                      tickLine={false}
+                      axisLine={false}
+                      className="text-xs fill-muted-foreground"
+                    />
+                    <Tooltip cursor={{ fill: "hsl(var(--muted))" }} content={<TrendTooltip />} />
+                    <Bar
+                      dataKey="revenuePaise"
+                      radius={[4, 4, 0, 0]}
+                      fill="hsl(var(--primary))"
+                      maxBarSize={48}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             )}
           </CardContent>
         </Card>
-        
-        <Card className="hover-elevate border-destructive/30 bg-destructive/5">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-destructive">Pending Actions</CardTitle>
-            <AlertTriangle className="w-4 h-4 text-destructive" />
+
+        {/* Running low — the count alone told nobody what to reorder. */}
+        <Card data-testid="card-low-stock">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">Running Low</CardTitle>
+              <PackageOpen className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{dashboard.pendingActionCount}</div>
-            <p className="text-xs text-destructive/80 mt-1">Orders waiting to be packed</p>
-          </CardContent>
-        </Card>
-        
-        <Card className="hover-elevate border-orange-200 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-900">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-orange-700 dark:text-orange-400">Low Stock Variants</CardTitle>
-            <PackageOpen className="w-4 h-4 text-orange-700 dark:text-orange-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-700 dark:text-orange-400">{dashboard.lowStockCount}</div>
+            {dashboard.lowStock.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <CheckCircle2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Everything well stocked</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {dashboard.lowStock.slice(0, 5).map((item) => (
+                  <div
+                    key={item.variantId}
+                    className="flex items-center justify-between gap-2 text-sm"
+                    data-testid={`row-low-stock-${item.variantId}`}
+                  >
+                    <span className="truncate">
+                      {item.productName}
+                      <span className="text-muted-foreground"> · {item.packLabel}</span>
+                    </span>
+                    <span
+                      className={`shrink-0 font-medium tabular-nums ${item.stockState === 'OUT' ? 'text-destructive' : 'text-orange-600 dark:text-orange-400'}`}
+                    >
+                      {item.stockState === 'OUT' ? 'Out' : `${item.stockQty} left`}
+                    </span>
+                  </div>
+                ))}
+                <Link
+                  href="/admin/inventory"
+                  className="flex items-center gap-1 text-sm text-primary hover:underline pt-2"
+                  data-testid="link-inventory"
+                >
+                  {dashboard.lowStockCount > 5
+                    ? `All ${dashboard.lowStockCount} low items`
+                    : "Open inventory"}
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -98,7 +271,7 @@ export default function AdminDashboard() {
           <CardContent>
             {dashboard.needsAction.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                <CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <CheckCircle2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p>All caught up!</p>
               </div>
             ) : (
@@ -117,9 +290,9 @@ export default function AdminDashboard() {
                     </div>
                   </Link>
                 ))}
-                {dashboard.needsAction.length > 5 && (
+                {dashboard.pendingActionCount > 5 && (
                   <Link href="/admin/orders" className="block text-center text-sm text-primary hover:underline mt-2">
-                    View all {dashboard.needsAction.length} orders
+                    View all {dashboard.pendingActionCount} orders
                   </Link>
                 )}
               </div>
@@ -159,25 +332,4 @@ export default function AdminDashboard() {
       </div>
     </div>
   );
-}
-
-// Needed icon that wasn't imported
-function CheckCircle(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-      <polyline points="22 4 12 14.01 9 11.01" />
-    </svg>
-  )
 }

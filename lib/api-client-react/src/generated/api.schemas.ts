@@ -658,6 +658,10 @@ export interface AdminOrder {
   /** @nullable */
   cancellationReason?: string | null;
   flaggedUnreachable?: boolean;
+  /** @nullable */
+  cashCollectedPaise?: number | null;
+  /** @nullable */
+  cashCollectedAt?: string | null;
   allowedTransitions: string[];
   events: OrderEvent[];
   createdAt: string;
@@ -696,10 +700,14 @@ export interface AdminDashboard {
   storeOpen: boolean;
   ordersToday: number;
   revenueTodayPaise: number;
+  ordersPlacedToday: number;
+  revenuePlacedTodayPaise: number;
   averageOrderValuePaise?: number;
   pendingActionCount: number;
   lowStockCount: number;
   outForDeliveryCount?: number;
+  cashCollectedTodayPaise: number;
+  cashPendingTodayPaise: number;
   statusBreakdown: StatusCount[];
   revenueTrend: RevenuePoint[];
   needsAction: AdminOrder[];
@@ -723,6 +731,9 @@ export const OrderStatusInputStatus = {
 export interface OrderStatusInput {
   status: OrderStatusInputStatus;
   note?: string;
+  /** @minLength 5 */
+  overrideReason?: string;
+  cashCollected?: boolean;
 }
 
 export interface RiderAssignmentInput {
@@ -844,6 +855,8 @@ export interface RiderOrder {
   itemCount: number;
   totalPaise: number;
   collectCashPaise: number;
+  /** @nullable */
+  cashCollectedPaise?: number | null;
   otpAttemptsRemaining: number;
   flaggedUnreachable: boolean;
   /** @nullable */
@@ -857,6 +870,7 @@ export interface DeliveryOtpInput {
      * @maxLength 4
      */
   otp: string;
+  cashCollected?: boolean;
 }
 
 export interface ServiceArea {

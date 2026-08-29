@@ -308,6 +308,15 @@ export const orders = pgTable(
       .default("PENDING"),
     paymentReference: text("payment_reference"),
 
+    /**
+     * Cash-on-delivery reconciliation. Written once, at the door, when the
+     * rider confirms the handover — never by the customer and never at
+     * checkout. Null on a prepaid order, and null on a cash order that has
+     * not been delivered yet.
+     */
+    cashCollectedPaise: integer("cash_collected_paise"),
+    cashCollectedAt: timestamp("cash_collected_at", { withTimezone: true }),
+
     // Address snapshot: the order must not change when the address record does.
     addressLabel: text("address_label"),
     receiverName: text("receiver_name").notNull(),

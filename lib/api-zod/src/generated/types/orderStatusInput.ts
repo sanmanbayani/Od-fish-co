@@ -10,4 +10,7 @@ import type { OrderStatusInputStatus } from './orderStatusInputStatus';
 export interface OrderStatusInput {
   status: OrderStatusInputStatus;
   note?: string;
+  /** @minLength 5 */
+  overrideReason?: string;
+  cashCollected?: boolean;
 }

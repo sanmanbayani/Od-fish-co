@@ -1136,10 +1136,14 @@ export const GetAdminDashboardResponse = zod.object({
   "storeOpen": zod.boolean(),
   "ordersToday": zod.number().int(),
   "revenueTodayPaise": zod.number().int(),
+  "ordersPlacedToday": zod.number().int(),
+  "revenuePlacedTodayPaise": zod.number().int(),
   "averageOrderValuePaise": zod.number().int().optional(),
   "pendingActionCount": zod.number().int(),
   "lowStockCount": zod.number().int(),
   "outForDeliveryCount": zod.number().int().optional(),
+  "cashCollectedTodayPaise": zod.number().int(),
+  "cashPendingTodayPaise": zod.number().int(),
   "statusBreakdown": zod.array(zod.object({
   "status": zod.string(),
   "count": zod.number().int()
@@ -1194,6 +1198,8 @@ export const GetAdminDashboardResponse = zod.object({
   "customerNote": zod.string().nullish(),
   "cancellationReason": zod.string().nullish(),
   "flaggedUnreachable": zod.boolean().optional(),
+  "cashCollectedPaise": zod.number().int().nullish(),
+  "cashCollectedAt": zod.string().nullish(),
   "allowedTransitions": zod.array(zod.string()),
   "events": zod.array(zod.object({
   "id": zod.string(),
@@ -1284,6 +1290,8 @@ export const ListAdminOrdersResponseItem = zod.object({
   "customerNote": zod.string().nullish(),
   "cancellationReason": zod.string().nullish(),
   "flaggedUnreachable": zod.boolean().optional(),
+  "cashCollectedPaise": zod.number().int().nullish(),
+  "cashCollectedAt": zod.string().nullish(),
   "allowedTransitions": zod.array(zod.string()),
   "events": zod.array(zod.object({
   "id": zod.string(),
@@ -1348,6 +1356,8 @@ export const GetAdminOrderResponse = zod.object({
   "customerNote": zod.string().nullish(),
   "cancellationReason": zod.string().nullish(),
   "flaggedUnreachable": zod.boolean().optional(),
+  "cashCollectedPaise": zod.number().int().nullish(),
+  "cashCollectedAt": zod.string().nullish(),
   "allowedTransitions": zod.array(zod.string()),
   "events": zod.array(zod.object({
   "id": zod.string(),
@@ -1369,9 +1379,15 @@ export const UpdateAdminOrderStatusParams = zod.object({
   "id": zod.coerce.string()
 })
 
+export const updateAdminOrderStatusBodyOverrideReasonMin = 5;
+
+
+
 export const UpdateAdminOrderStatusBody = zod.object({
   "status": zod.enum(['PLACED', 'CONFIRMED', 'PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED', 'FAILED']),
-  "note": zod.string().optional()
+  "note": zod.string().optional(),
+  "overrideReason": zod.string().min(updateAdminOrderStatusBodyOverrideReasonMin).optional(),
+  "cashCollected": zod.boolean().optional()
 })
 
 export const UpdateAdminOrderStatusResponse = zod.object({
@@ -1419,6 +1435,76 @@ export const UpdateAdminOrderStatusResponse = zod.object({
   "customerNote": zod.string().nullish(),
   "cancellationReason": zod.string().nullish(),
   "flaggedUnreachable": zod.boolean().optional(),
+  "cashCollectedPaise": zod.number().int().nullish(),
+  "cashCollectedAt": zod.string().nullish(),
+  "allowedTransitions": zod.array(zod.string()),
+  "events": zod.array(zod.object({
+  "id": zod.string(),
+  "fromStatus": zod.string().nullish(),
+  "toStatus": zod.string(),
+  "note": zod.string().nullish(),
+  "actorType": zod.string(),
+  "createdAt": zod.string()
+})),
+  "createdAt": zod.string(),
+  "deliveredAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Bank cash for a delivered order that is still owing
+ */
+export const RecordOrderCashParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const RecordOrderCashResponse = zod.object({
+  "id": zod.string(),
+  "orderNumber": zod.string(),
+  "status": zod.string(),
+  "paymentMethod": zod.string(),
+  "paymentStatus": zod.string(),
+  "customerName": zod.string(),
+  "customerPhone": zod.string(),
+  "address": zod.object({
+  "label": zod.string().nullish(),
+  "receiverName": zod.string(),
+  "receiverPhone": zod.string(),
+  "line1": zod.string(),
+  "line2": zod.string().nullish(),
+  "area": zod.string(),
+  "city": zod.string(),
+  "state": zod.string().nullish(),
+  "pincode": zod.string()
+}),
+  "slotId": zod.string().nullish(),
+  "slotLabel": zod.string(),
+  "deliveryDate": zod.string(),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "variantId": zod.string().optional(),
+  "productName": zod.string(),
+  "productNameLocal": zod.string().nullish(),
+  "cutType": zod.string(),
+  "packLabel": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "grossWeightG": zod.number().int().nullish(),
+  "unitPricePaise": zod.number().int(),
+  "quantity": zod.number().int(),
+  "lineTotalPaise": zod.number().int()
+})),
+  "subtotalPaise": zod.number().int().optional(),
+  "deliveryFeePaise": zod.number().int().optional(),
+  "handlingFeePaise": zod.number().int().optional(),
+  "totalPaise": zod.number().int(),
+  "itemCount": zod.number().int(),
+  "riderId": zod.string().nullish(),
+  "riderName": zod.string().nullish(),
+  "customerNote": zod.string().nullish(),
+  "cancellationReason": zod.string().nullish(),
+  "flaggedUnreachable": zod.boolean().optional(),
+  "cashCollectedPaise": zod.number().int().nullish(),
+  "cashCollectedAt": zod.string().nullish(),
   "allowedTransitions": zod.array(zod.string()),
   "events": zod.array(zod.object({
   "id": zod.string(),
@@ -1489,6 +1575,8 @@ export const AssignRiderResponse = zod.object({
   "customerNote": zod.string().nullish(),
   "cancellationReason": zod.string().nullish(),
   "flaggedUnreachable": zod.boolean().optional(),
+  "cashCollectedPaise": zod.number().int().nullish(),
+  "cashCollectedAt": zod.string().nullish(),
   "allowedTransitions": zod.array(zod.string()),
   "events": zod.array(zod.object({
   "id": zod.string(),
@@ -2108,6 +2196,7 @@ export const ListRiderOrdersResponseItem = zod.object({
   "itemCount": zod.number().int(),
   "totalPaise": zod.number().int(),
   "collectCashPaise": zod.number().int(),
+  "cashCollectedPaise": zod.number().int().nullish(),
   "otpAttemptsRemaining": zod.number().int(),
   "flaggedUnreachable": zod.boolean(),
   "deliveredAt": zod.string().nullish(),
@@ -2141,7 +2230,8 @@ export const verifyDeliveryOtpBodyOtpMax = 4;
 
 
 export const VerifyDeliveryOtpBody = zod.object({
-  "otp": zod.string().min(verifyDeliveryOtpBodyOtpMin).max(verifyDeliveryOtpBodyOtpMax)
+  "otp": zod.string().min(verifyDeliveryOtpBodyOtpMin).max(verifyDeliveryOtpBodyOtpMax),
+  "cashCollected": zod.boolean().optional()
 })
 
 export const VerifyDeliveryOtpResponse = zod.object({
@@ -2165,6 +2255,55 @@ export const VerifyDeliveryOtpResponse = zod.object({
   "itemCount": zod.number().int(),
   "totalPaise": zod.number().int(),
   "collectCashPaise": zod.number().int(),
+  "cashCollectedPaise": zod.number().int().nullish(),
+  "otpAttemptsRemaining": zod.number().int(),
+  "flaggedUnreachable": zod.boolean(),
+  "deliveredAt": zod.string().nullish(),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "variantId": zod.string().optional(),
+  "productName": zod.string(),
+  "productNameLocal": zod.string().nullish(),
+  "cutType": zod.string(),
+  "packLabel": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "grossWeightG": zod.number().int().nullish(),
+  "unitPricePaise": zod.number().int(),
+  "quantity": zod.number().int(),
+  "lineTotalPaise": zod.number().int()
+})).optional()
+})
+
+
+/**
+ * @summary Rider sets out with an order assigned to them
+ */
+export const StartRiderDeliveryParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const StartRiderDeliveryResponse = zod.object({
+  "id": zod.string(),
+  "orderNumber": zod.string(),
+  "status": zod.string(),
+  "customerName": zod.string(),
+  "customerPhone": zod.string(),
+  "address": zod.object({
+  "label": zod.string().nullish(),
+  "receiverName": zod.string(),
+  "receiverPhone": zod.string(),
+  "line1": zod.string(),
+  "line2": zod.string().nullish(),
+  "area": zod.string(),
+  "city": zod.string(),
+  "state": zod.string().nullish(),
+  "pincode": zod.string()
+}),
+  "slotLabel": zod.string(),
+  "itemCount": zod.number().int(),
+  "totalPaise": zod.number().int(),
+  "collectCashPaise": zod.number().int(),
+  "cashCollectedPaise": zod.number().int().nullish(),
   "otpAttemptsRemaining": zod.number().int(),
   "flaggedUnreachable": zod.boolean(),
   "deliveredAt": zod.string().nullish(),
@@ -2212,6 +2351,7 @@ export const ReportUnreachableResponse = zod.object({
   "itemCount": zod.number().int(),
   "totalPaise": zod.number().int(),
   "collectCashPaise": zod.number().int(),
+  "cashCollectedPaise": zod.number().int().nullish(),
   "otpAttemptsRemaining": zod.number().int(),
   "flaggedUnreachable": zod.boolean(),
   "deliveredAt": zod.string().nullish(),

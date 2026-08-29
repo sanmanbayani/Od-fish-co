@@ -37,6 +37,10 @@ export interface AdminOrder {
   /** @nullable */
   cancellationReason?: string | null;
   flaggedUnreachable?: boolean;
+  /** @nullable */
+  cashCollectedPaise?: number | null;
+  /** @nullable */
+  cashCollectedAt?: string | null;
   allowedTransitions: string[];
   events: OrderEvent[];
   createdAt: string;

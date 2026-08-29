@@ -86,8 +86,15 @@ export default function OrderScreen() {
         setError(apiErrorMessage(err, 'Could not cancel this order.'));
       }
     };
+    // Alert.alert is a no-op on react-native-web, so the browser build needs
+    // its own confirm — without one, a stray tap cancels a real order.
     if (Platform.OS === 'web') {
-      run();
+      const ok =
+        typeof window === 'undefined' ||
+        window.confirm(
+          'Cancel this order?\n\nFish is cut to order, so cancellation is only possible before we pack.',
+        );
+      if (ok) run();
       return;
     }
     Alert.alert(

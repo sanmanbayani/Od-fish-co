@@ -12,4 +12,5 @@ export interface DeliveryOtpInput {
      * @maxLength 4
      */
   otp: string;
+  cashCollected?: boolean;
 }

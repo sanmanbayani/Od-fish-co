@@ -4,12 +4,13 @@ import {
   useListRiderOrders, 
   useVerifyDeliveryOtp, 
   useReportUnreachable,
-  useUpdateAdminOrderStatus
+  useStartRiderDelivery
 } from "@workspace/api-client-react";
 import { formatPaise } from "@/lib/format";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { MapPin, Phone, Package, ArrowLeft, CheckCircle2, AlertTriangle, ShieldCheck } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -24,15 +25,17 @@ export default function RiderOrderDetails() {
   const order = orders?.find(o => o.id === id);
 
   const [otp, setOtp] = useState("");
+  const [cashCollected, setCashCollected] = useState(false);
   const verifyOtp = useVerifyDeliveryOtp();
   const reportUnreachable = useReportUnreachable();
-  const updateStatus = useUpdateAdminOrderStatus(); // For PACKED -> OUT_FOR_DELIVERY
+  // Riders get their own dispatch route; the ops status endpoint refuses them.
+  const startDelivery = useStartRiderDelivery();
 
   if (isLoading) return <div className="p-8 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
   if (!order) return <div className="p-8 text-center">Order not found</div>;
 
   const handleStartDelivery = () => {
-    updateStatus.mutate({ id: id!, data: { status: 'OUT_FOR_DELIVERY' } }, {
+    startDelivery.mutate({ id: id! }, {
       onSuccess: () => {
         toast({ title: "Delivery Started" });
         queryClient.invalidateQueries({ queryKey: ["/api/rider/orders"] });
@@ -43,10 +46,16 @@ export default function RiderOrderDetails() {
   const handleVerifyOtp = (e: React.FormEvent) => {
     e.preventDefault();
     if (otp.length !== 4) return;
-    
-    verifyOtp.mutate({ id: id!, data: { otp } }, {
+    if (needsCash && !cashCollected) return;
+
+    verifyOtp.mutate({ id: id!, data: { otp, cashCollected } }, {
       onSuccess: () => {
-        toast({ title: "Delivery Successful!", description: "Order marked as delivered." });
+        toast({
+          title: "Delivery Successful!",
+          description: needsCash
+            ? `Order delivered and ${formatPaise(order.collectCashPaise)} cash recorded.`
+            : "Order marked as delivered.",
+        });
         queryClient.invalidateQueries({ queryKey: ["/api/rider/orders"] });
       },
       onError: (err: any) => {
@@ -66,6 +75,8 @@ export default function RiderOrderDetails() {
     }
   };
 
+  /** A cash order cannot be closed until the rider says the money is in hand. */
+  const needsCash = order.collectCashPaise > 0;
   const isDelivered = order.status === 'DELIVERED';
   const isFailed = order.status === 'FAILED' || order.status === 'CANCELLED';
 
@@ -141,7 +152,7 @@ export default function RiderOrderDetails() {
               <Package className="w-12 h-12 mx-auto text-primary mb-4" />
               <h3 className="font-bold text-lg mb-2">Pick up from store</h3>
               <p className="text-sm text-muted-foreground mb-6">Confirm once you have picked up this order and are leaving for delivery.</p>
-              <Button className="w-full h-14 text-lg font-bold" onClick={handleStartDelivery} disabled={updateStatus.isPending}>
+              <Button className="w-full h-14 text-lg font-bold" onClick={handleStartDelivery} disabled={startDelivery.isPending}>
                 Start Delivery
               </Button>
             </CardContent>
@@ -172,12 +183,42 @@ export default function RiderOrderDetails() {
                   )}
                 </div>
                 
+                {needsCash && (
+                  <label
+                    htmlFor="cash-collected"
+                    className={`flex items-center gap-3 rounded-lg border-2 p-4 cursor-pointer transition-colors ${
+                      cashCollected
+                        ? "border-green-500 bg-green-50"
+                        : "border-dashed border-primary/40 bg-primary/5"
+                    }`}
+                    data-testid="label-cash-collected"
+                  >
+                    <Checkbox
+                      id="cash-collected"
+                      checked={cashCollected}
+                      onCheckedChange={(checked) => setCashCollected(checked === true)}
+                      className="w-6 h-6"
+                      data-testid="checkbox-cash-collected"
+                    />
+                    <span className="text-sm font-medium leading-snug">
+                      I have collected{" "}
+                      <span className="font-bold">{formatPaise(order.collectCashPaise)}</span>{" "}
+                      in cash
+                    </span>
+                  </label>
+                )}
+
                 <Button 
                   type="submit" 
                   className="w-full h-14 text-lg font-bold" 
-                  disabled={otp.length !== 4 || verifyOtp.isPending}
+                  disabled={otp.length !== 4 || (needsCash && !cashCollected) || verifyOtp.isPending}
+                  data-testid="button-verify-complete"
                 >
-                  {verifyOtp.isPending ? "Verifying..." : "Verify & Complete"}
+                  {verifyOtp.isPending
+                    ? "Verifying..."
+                    : needsCash && !cashCollected
+                      ? "Confirm the cash first"
+                      : "Verify & Complete"}
                 </Button>
               </form>
 
@@ -195,7 +236,11 @@ export default function RiderOrderDetails() {
           <div className="bg-green-50 border border-green-200 text-green-700 p-6 rounded-xl text-center space-y-2 shadow-sm">
             <CheckCircle2 className="w-12 h-12 mx-auto text-green-500" />
             <h3 className="font-bold text-xl">Delivered Successfully</h3>
-            <p className="text-sm">Great job! This order is complete.</p>
+            <p className="text-sm">
+              {order.cashCollectedPaise
+                ? `${formatPaise(order.cashCollectedPaise)} cash collected. Hand it in at the counter.`
+                : "Great job! This order is complete."}
+            </p>
           </div>
         )}
       </div>

@@ -4,7 +4,8 @@ import {
   getGetAdminOrderQueryKey, 
   useUpdateAdminOrderStatus, 
   useAssignRider,
-  useListStaff
+  useListStaff,
+  useRecordOrderCash
 } from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
 import { formatPaise, formatOnlyDate, formatTime, formatWeight } from "@/lib/format";
@@ -12,6 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Clock, MapPin, Phone, User, Package, FileText, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +26,9 @@ export default function AdminOrderDetails() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [deskClose, setDeskClose] = React.useState(false);
+  const [overrideReason, setOverrideReason] = React.useState("");
+  const [cashIn, setCashIn] = React.useState(false);
 
   const { data: order, isLoading, error } = useGetAdminOrder(id!, {
     query: {
@@ -33,11 +41,22 @@ export default function AdminOrderDetails() {
   const riders = staffList?.filter(s => s.role === 'RIDER' && s.isActive) || [];
 
   const updateStatus = useUpdateAdminOrderStatus();
+  const needsCash = order?.paymentMethod === 'COD' && order?.paymentStatus !== 'PAID';
+  // A delivery closed at the desk without the money stays owing until the
+  // rider hands it over; DELIVERED is terminal, so it gets its own action.
+  const needsLateCash = order?.status === 'DELIVERED' && needsCash;
+  const recordCash = useRecordOrderCash();
   const assignRider = useAssignRider();
 
-  const handleStatusChange = (newStatus: any) => {
-    updateStatus.mutate({ id: id!, data: { status: newStatus } }, {
+  const handleStatusChange = (
+    newStatus: any,
+    extras?: { overrideReason?: string; cashCollected?: boolean },
+  ) => {
+    updateStatus.mutate({ id: id!, data: { status: newStatus, ...extras } }, {
       onSuccess: () => {
+        setDeskClose(false);
+        setOverrideReason("");
+        setCashIn(false);
         toast({ title: "Status updated", description: `Order moved to ${newStatus}` });
         queryClient.invalidateQueries({ queryKey: getGetAdminOrderQueryKey(id!) });
         queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard"] });
@@ -196,12 +215,12 @@ export default function AdminOrderDetails() {
                     {order.allowedTransitions.map(status => (
                       <Button 
                         key={status} 
-                        onClick={() => handleStatusChange(status)}
+                        onClick={() => (status === 'DELIVERED' ? setDeskClose(true) : handleStatusChange(status))}
                         variant={status === 'CANCELLED' ? 'destructive' : 'default'}
                         className="w-full justify-start"
                         disabled={updateStatus.isPending}
                       >
-                        Move to {status}
+                        {status === 'DELIVERED' ? 'Mark delivered (no code)' : `Move to ${status}`}
                       </Button>
                     ))}
                   </div>
@@ -211,6 +230,86 @@ export default function AdminOrderDetails() {
                   No further status updates available.
                 </div>
               )}
+
+              <Dialog open={deskClose} onOpenChange={setDeskClose}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Close this delivery from the desk?</DialogTitle>
+                    <DialogDescription>
+                      Normally the rider reads back the customer&apos;s handover code at the door. Closing it here skips that proof, so your reason is saved against this order.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="override-reason">Why is the code being skipped?</Label>
+                      <Input
+                        id="override-reason"
+                        value={overrideReason}
+                        onChange={(e) => setOverrideReason(e.target.value)}
+                        placeholder="Rider&apos;s phone battery died"
+                        data-testid="input-override-reason"
+                      />
+                    </div>
+                    {needsCash && (
+                      <label className="flex items-start gap-3 rounded-md border p-3 cursor-pointer">
+                        <Checkbox
+                          checked={cashIn}
+                          onCheckedChange={(v) => setCashIn(v === true)}
+                          data-testid="checkbox-desk-cash"
+                        />
+                        <span className="text-sm">
+                          <span className="font-medium">The {formatPaise(order.totalPaise)} cash is in hand.</span>
+                          <span className="block text-muted-foreground">Leave this unticked and the order stays on the books as money owed.</span>
+                        </span>
+                      </label>
+                    )}
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setDeskClose(false)}>Back</Button>
+                    <Button
+                      disabled={overrideReason.trim().length < 5 || updateStatus.isPending}
+                      onClick={() => handleStatusChange("DELIVERED", { overrideReason: overrideReason.trim(), cashCollected: cashIn })}
+                      data-testid="button-confirm-desk-close"
+                    >
+                      Mark delivered
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {needsLateCash && (
+                <div className="rounded-md border border-orange-500/40 bg-orange-500/5 p-3 space-y-2">
+                  <p className="text-sm font-medium">
+                    Still owing {formatPaise(order.totalPaise)} in cash.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Bank it here once the rider hands the notes over at the counter.
+                  </p>
+                  <Button
+                    className="w-full"
+                    disabled={recordCash.isPending}
+                    onClick={() =>
+                      recordCash.mutate(
+                        { id: id! },
+                        {
+                          onSuccess: () => {
+                            toast({ title: "Cash banked", description: `${formatPaise(order.totalPaise)} recorded against this order` });
+                            queryClient.invalidateQueries({ queryKey: getGetAdminOrderQueryKey(id!) });
+                            queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard"] });
+                          },
+                          onError: (err: any) => {
+                            toast({ title: "Could not bank the cash", description: err.error || "Unknown error", variant: "destructive" });
+                          },
+                        },
+                      )
+                    }
+                    data-testid="button-record-cash"
+                  >
+                    Cash received
+                  </Button>
+                </div>
+              )}
+
 
               {/* Rider Assignment if status allows */}
               {['CONFIRMED', 'PACKED', 'OUT_FOR_DELIVERY'].includes(order.status) && (
@@ -291,6 +390,31 @@ export default function AdminOrderDetails() {
                   {order.paymentStatus}
                 </span>
               </div>
+              {order.cashCollectedPaise != null ? (
+                <div className="flex justify-between pt-2 border-t" data-testid="row-cash-collected">
+                  <span className="text-muted-foreground">
+                    Cash collected
+                    {order.cashCollectedAt && (
+                      <span className="block text-xs">
+                        {new Date(order.cashCollectedAt).toLocaleString("en-IN", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    )}
+                  </span>
+                  <span className="font-bold text-green-600">
+                    {formatPaise(order.cashCollectedPaise)}
+                  </span>
+                </div>
+              ) : order.paymentMethod === 'COD' && order.status !== 'CANCELLED' && order.status !== 'FAILED' ? (
+                <div className="flex justify-between pt-2 border-t" data-testid="row-cash-pending">
+                  <span className="text-muted-foreground">To collect at the door</span>
+                  <span className="font-bold text-orange-500">{formatPaise(order.totalPaise)}</span>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         </div>
