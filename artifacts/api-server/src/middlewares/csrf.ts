@@ -6,6 +6,9 @@ import { CUSTOMER_COOKIE, STAFF_COOKIE } from "./auth";
 /** Methods that must not change state, so they need no origin check. */
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
+/** `Authorization: Bearer <token>` — how the Expo app proves who it is. */
+const BEARER_TOKEN = /^Bearer\s+\S/i;
+
 /**
  * Endpoints that *hand out* a session cookie. Paths are relative to the /api
  * mount point.
@@ -49,12 +52,27 @@ function isTrustedOrigin(origin: string, req: Request): boolean {
  * puts the check back where the cookie policy no longer does it, by comparing
  * the request's Origin against the same allow-list CORS uses.
  *
- * Only cookie-bearing requests are affected. The Expo app authenticates with a
- * bearer token, which a hostile page cannot make the browser attach, so native
- * traffic passes through untouched.
+ * Only cookie-bearing browser requests are affected. The Expo app authenticates
+ * with a bearer token, which a hostile page cannot make the browser attach, so
+ * native traffic is let through on the strength of that header — see the note
+ * about React Native's cookie jar below.
  */
 export function requireTrustedOrigin(req: Request, _res: Response, next: NextFunction): void {
   if (SAFE_METHODS.has(req.method)) return next();
+
+  // A bearer token is not ambient authority: a hostile page cannot make the
+  // browser attach one, and setting the header itself turns the request into a
+  // preflighted CORS call the browser will not grant. A request carrying one is
+  // therefore a native client or a deliberate API call, and the origin rule does
+  // not apply to it.
+  //
+  // This matters more than it looks. React Native's networking layer keeps
+  // cookies of its own accord, so the phone holds the session cookie the login
+  // response set even though the app authenticates with the token. Judged on
+  // that cookie alone it is indistinguishable from a browser that lost its
+  // Origin — and without this line every write from the phone is refused the
+  // moment cross-site cookies are switched on in production.
+  if (BEARER_TOKEN.test(req.get("authorization") ?? "")) return next();
 
   const cookies = req.cookies as Record<string, string | undefined> | undefined;
   const hasSessionCookie = Boolean(cookies?.[CUSTOMER_COOKIE] ?? cookies?.[STAFF_COOKIE]);
