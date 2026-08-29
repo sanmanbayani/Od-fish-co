@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import type { Product } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
-import { radii } from '@/constants/colors';
+import { overlay, radii } from '@/constants/colors';
 import { mediaUrl } from '@/lib/api';
 import { discountPercent, rupees } from '@/lib/format';
 import { Text } from '@/components/ui/Text';
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
   offBadge: { position: 'absolute', top: 8, left: 8 },
   soldOutVeil: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(248,246,241,0.72)',
+    backgroundColor: overlay.scrim,
     alignItems: 'center',
     justifyContent: 'center',
   },

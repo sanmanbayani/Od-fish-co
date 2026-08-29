@@ -8,3 +8,4 @@
 - [Hosting topology decisions](cross-origin-deployment.md) — why the API must be always-on, and why both surfaces need one registrable domain.
 - [Parallelising web work](web-surface-conventions.md) — the shared router is the one file every frontend feature touches; stub routes before dispatching agents.
 - [Ambient vs explicit API host](expo-public-domain-precedence.md) — Replit's domain vars are set everywhere, so a fallback chain silently ignores the host you meant to use.
+- [Expo surface conventions](mobile-surface-conventions.md) — sticky footers must ride the keyboard, and the failure-state rules every consumer screen is held to.

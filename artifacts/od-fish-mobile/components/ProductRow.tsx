@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import type { Product } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
-import { radii } from '@/constants/colors';
+import { overlay, radii } from '@/constants/colors';
 import { mediaUrl } from '@/lib/api';
 import { cutLabel, discountPercent, netWeightRange, rupees } from '@/lib/format';
 import { Text } from '@/components/ui/Text';
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   thumb: { width: '100%', height: '100%' },
   veil: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(248,246,241,0.66)',
+    backgroundColor: overlay.scrim,
   },
   body: { flex: 1, padding: 12, gap: 2, justifyContent: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

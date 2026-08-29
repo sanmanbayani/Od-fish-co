@@ -19,10 +19,10 @@ export function Badge({
 
   const map: Record<Tone, { bg: string; fg: string }> = {
     neutral: { bg: colors.secondary, fg: colors.mutedForeground },
-    success: { bg: 'rgba(18,113,95,0.12)', fg: colors.success },
-    danger: { bg: 'rgba(207,23,54,0.10)', fg: colors.destructive },
+    success: { bg: colors.successSurface, fg: colors.success },
+    danger: { bg: colors.destructiveSurface, fg: colors.destructive },
     navy: { bg: colors.primary, fg: colors.primaryForeground },
-    warning: { bg: 'rgba(180,110,20,0.12)', fg: '#8A5A12' },
+    warning: { bg: colors.warningSurface, fg: colors.warning },
   };
   const tones = map[tone];
 

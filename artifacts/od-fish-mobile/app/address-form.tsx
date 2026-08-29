@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,9 +14,12 @@ import { useColors } from '@/hooks/useColors';
 import { radii, spacing } from '@/constants/colors';
 import { apiErrorMessage } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
+import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
+import { KeyboardStickyFooter } from '@/components/KeyboardStickyFooter';
 import { Text } from '@/components/ui/Text';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
+import { EmptyState, ErrorView, LoadingView } from '@/components/ui/StateViews';
 import { Screen } from '@/components/ui/Screen';
 
 const LABELS = ['Home', 'Work', 'Other'];
@@ -117,16 +120,59 @@ export default function AddressFormScreen() {
   };
 
   const pinResult = pincode.length === 6 ? serviceability.data : undefined;
+  const missingForEdit =
+    isEdit && addresses.isSuccess && !addresses.data?.find((a) => a.id === id);
+
+  if (isEdit && !hydrated && addresses.isLoading) {
+    return (
+      <Screen>
+        <Stack.Screen options={{ title: 'Edit address' }} />
+        <LoadingView />
+      </Screen>
+    );
+  }
+
+  // Rendering an empty form here would invite the customer to retype an
+  // address from scratch and save the gaps over the one we already hold.
+  if (isEdit && !hydrated && addresses.isError) {
+    return (
+      <Screen>
+        <Stack.Screen options={{ title: 'Edit address' }} />
+        <ErrorView
+          message={apiErrorMessage(addresses.error, 'Could not load this address.')}
+          onRetry={() => addresses.refetch()}
+        />
+      </Screen>
+    );
+  }
+
+  // The address is genuinely gone — removed on another device, or a stale deep
+  // link. Retrying would loop for ever, so offer the way out instead.
+  if (isEdit && !hydrated && missingForEdit) {
+    return (
+      <Screen>
+        <Stack.Screen options={{ title: 'Edit address' }} />
+        <EmptyState
+          icon="map-pin"
+          title="That address is gone"
+          body="It looks like it was removed. Your other saved addresses are still here."
+          actionLabel="Back to addresses"
+          onAction={() => router.replace('/addresses')}
+        />
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
       <Stack.Screen
         options={{ title: isEdit ? 'Edit address' : 'New address' }}
       />
-      <ScrollView
+      <KeyboardAwareScrollViewCompat
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        bottomOffset={96}
       >
         <View>
           <Text variant="label" tone="muted" uppercase style={styles.groupLabel}>
@@ -170,7 +216,9 @@ export default function AddressFormScreen() {
           onChangeText={(t) => setPincode(t.replace(/\D/g, ''))}
           error={errors.pincode}
           hint={
-            pinResult
+            serviceability.isError && pincode.length === 6
+              ? 'Could not check this pincode right now — you can still save the address.'
+              : pinResult
               ? pinResult.serviceable
                 ? `We deliver to ${pinResult.areaName ?? pinResult.pincode}.`
                 : 'Not on our route yet — you can still save it for later.'
@@ -247,9 +295,9 @@ export default function AddressFormScreen() {
             {formError}
           </Text>
         ) : null}
-      </ScrollView>
+      </KeyboardAwareScrollViewCompat>
 
-      <View
+      <KeyboardStickyFooter
         style={[
           styles.footer,
           {
@@ -266,7 +314,7 @@ export default function AddressFormScreen() {
           loading={createAddress.isPending || updateAddress.isPending}
           onPress={save}
         />
-      </View>
+      </KeyboardStickyFooter>
     </Screen>
   );
 }
@@ -276,12 +324,19 @@ const styles = StyleSheet.create({
   groupLabel: { marginBottom: 8 },
   chips: { flexDirection: 'row', gap: 8 },
   chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 18,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: radii.pill,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  checkboxRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: 44,
+  },
   checkbox: {
     width: 20,
     height: 20,
@@ -290,10 +345,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   footer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,

@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGetCart } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
-import { radii } from '@/constants/colors';
+import { deepInk, overlay, radii } from '@/constants/colors';
 import { useAuth } from '@/lib/auth';
 import { rupees } from '@/lib/format';
 import { Text } from '@/components/ui/Text';
@@ -45,7 +45,7 @@ export function CartBar({ offset = 0 }: { offset?: number }) {
         ]}
       >
         <View style={styles.left}>
-          <View style={[styles.count, { backgroundColor: 'rgba(248,246,241,0.16)' }]}>
+          <View style={[styles.count, { backgroundColor: overlay.fill }]}>
             <Text variant="smallMedium" tone="inverse">
               {cart.itemCount}
             </Text>
@@ -54,7 +54,7 @@ export function CartBar({ offset = 0 }: { offset?: number }) {
             <Text variant="smallMedium" tone="inverse">
               {cart.itemCount === 1 ? '1 item' : `${cart.itemCount} items`}
             </Text>
-            <Text variant="tiny" style={{ color: 'rgba(248,246,241,0.65)' }}>
+            <Text variant="tiny" style={{ color: overlay.mutedForeground }}>
               {rupees(cart.bill.subtotalPaise)} + fees
             </Text>
           </View>
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    shadowColor: '#08142E',
+    shadowColor: deepInk,
     shadowOpacity: 0.24,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },

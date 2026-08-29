@@ -1,14 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRequestOtp, useVerifyOtp } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
-import { radii, spacing } from '@/constants/colors';
+import { overlay, radii, spacing } from '@/constants/colors';
 import { fonts } from '@/constants/typography';
 import { apiErrorMessage } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
+import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { BrandMark } from '@/components/BrandMark';
 import { Text } from '@/components/ui/Text';
 import { Button } from '@/components/ui/Button';
@@ -92,12 +93,13 @@ export default function LoginScreen() {
 
   return (
     <Screen tone="deep">
-      <ScrollView
+      <KeyboardAwareScrollViewCompat
         contentContainerStyle={[
           styles.scroll,
           { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + 40 },
         ]}
         keyboardShouldPersistTaps="handled"
+        bottomOffset={72}
       >
         <View style={styles.topRow}>
           <BrandMark size={38} showWordmark={false} />
@@ -106,7 +108,7 @@ export default function LoginScreen() {
             accessibilityLabel="Close"
             onPress={close}
             hitSlop={12}
-            style={[styles.close, { borderColor: 'rgba(248,246,241,0.24)' }]}
+            style={[styles.close, { borderColor: overlay.hairline }]}
           >
             <Feather name="x" size={17} color={colors.deepForeground} />
           </Pressable>
@@ -115,7 +117,7 @@ export default function LoginScreen() {
         <Text variant="hero" tone="inverse" style={styles.headline}>
           {step === 'phone' ? 'The catch of the\nday, at your door.' : 'Enter the code'}
         </Text>
-        <Text style={[styles.sub, { color: 'rgba(248,246,241,0.66)' }]} variant="body">
+        <Text style={[styles.sub, { color: overlay.mutedForeground }]} variant="body">
           {step === 'phone'
             ? 'Sign in with your mobile number. No password to remember.'
             : `We sent a 6-digit code to +91 ${phone}.`}
@@ -135,6 +137,9 @@ export default function LoginScreen() {
                 placeholder="98XXXXXXXX"
                 keyboardType="number-pad"
                 textContentType="telephoneNumber"
+                autoComplete="tel"
+                returnKeyType="done"
+                onSubmitEditing={onSendOtp}
                 maxLength={10}
                 value={phone}
                 onChangeText={(t) => setPhone(t.replace(/\D/g, ''))}
@@ -161,6 +166,9 @@ export default function LoginScreen() {
                 placeholder="······"
                 keyboardType="number-pad"
                 textContentType="oneTimeCode"
+                autoComplete="one-time-code"
+                returnKeyType="done"
+                onSubmitEditing={() => onVerify()}
                 maxLength={6}
                 value={otp}
                 onChangeText={(t) => {
@@ -238,7 +246,7 @@ export default function LoginScreen() {
             </>
           )}
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollViewCompat>
     </Screen>
   );
 }

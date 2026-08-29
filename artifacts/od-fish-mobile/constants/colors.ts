@@ -6,6 +6,28 @@
  * navy ink on warm cream paper, with a gill-red accent for destructive states.
  */
 
+/** Deep-water navy. Also the shadow cast by floating surfaces. */
+export const deepInk = '#08142E';
+
+/**
+ * Cream at reduced opacity. These sit on the deep navy band or over product
+ * photography, where a solid palette colour would shout. Exported at the top
+ * level so static StyleSheets can reach them without the theme hook.
+ */
+export const overlay = {
+  /** Hairlines and outlines on the deep band. */
+  hairline: 'rgba(248,246,241,0.18)',
+  /** Secondary text and icons on the deep band. */
+  mutedForeground: 'rgba(248,246,241,0.66)',
+  /** Filled counters and chips on the deep band. */
+  fill: 'rgba(248,246,241,0.16)',
+  /** Frosted cream label laid over a photograph. */
+  scrim: 'rgba(248,246,241,0.7)',
+};
+
+/** Live-countdown mint. Only legible on the deep band. */
+export const mint = '#7FD7C4';
+
 const colors = {
   light: {
     // Legacy aliases kept for scaffold compatibility
@@ -39,17 +61,23 @@ const colors = {
     // Destructive actions — gill red
     destructive: '#CF1736',
     destructiveForeground: '#FFFFFF',
+    destructiveSurface: 'rgba(207,23,54,0.10)',
+
+    // Warning — slots closing, low stock
+    warning: '#8A5A12',
+    warningSurface: 'rgba(180,110,20,0.12)',
 
     // Fresh / success — sea green, used for in-stock and delivered states
     success: '#12715F',
     successForeground: '#FFFFFF',
+    successSurface: 'rgba(18,113,95,0.12)',
 
     // Borders and input outlines
     border: '#E2DDD4',
     input: '#E2DDD4',
 
     // Deep-water surface used for the hero band and sticky cart bar
-    deep: '#08142E',
+    deep: deepInk,
     deepForeground: '#F8F6F1',
   },
 

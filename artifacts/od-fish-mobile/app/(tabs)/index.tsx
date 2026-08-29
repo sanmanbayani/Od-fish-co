@@ -17,8 +17,8 @@ import {
   useJoinWaitlist,
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
-import { radii, spacing } from '@/constants/colors';
-import { countdown, deliveryDate } from '@/lib/format';
+import { mint, overlay, radii, spacing } from '@/constants/colors';
+import { apiErrorMessage, countdown, deliveryDate } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
 import { BrandMark } from '@/components/BrandMark';
 import { CartBar } from '@/components/CartBar';
@@ -41,6 +41,7 @@ export default function HomeScreen() {
   const [pincode, setPincode] = useState('');
   const [checked, setChecked] = useState<string | null>(null);
   const [waitlisted, setWaitlisted] = useState(false);
+  const [waitlistError, setWaitlistError] = useState<string | null>(null);
 
   const feed = useGetHomeFeed({
     query: { queryKey: ['home'], refetchInterval: CATALOGUE_POLL_MS },
@@ -110,21 +111,21 @@ export default function HomeScreen() {
           {slot ? (
             <Pressable
               onPress={() => router.push('/(tabs)/shop')}
-              style={[styles.slotStrip, { borderColor: 'rgba(248,246,241,0.18)' }]}
+              style={[styles.slotStrip, { borderColor: overlay.hairline }]}
             >
-              <Feather name="clock" size={14} color="rgba(248,246,241,0.7)" />
+              <Feather name="clock" size={14} color={overlay.mutedForeground} />
               <Text variant="smallMedium" tone="inverse" style={styles.flex}>
                 {deliveryDate(slot.deliveryDate)} · {slot.label}
               </Text>
               {countdown(slot.secondsToCutoff) ? (
-                <Text variant="tiny" style={{ color: '#7FD7C4' }}>
+                <Text variant="tiny" style={{ color: mint }}>
                   {countdown(slot.secondsToCutoff)}
                 </Text>
               ) : null}
             </Pressable>
           ) : (
-            <View style={[styles.slotStrip, { borderColor: 'rgba(248,246,241,0.18)' }]}>
-              <Feather name="moon" size={14} color="rgba(248,246,241,0.7)" />
+            <View style={[styles.slotStrip, { borderColor: overlay.hairline }]}>
+              <Feather name="moon" size={14} color={overlay.mutedForeground} />
               <Text variant="smallMedium" tone="inverse" style={styles.flex}>
                 No slots open right now — check back in the morning.
               </Text>
@@ -157,6 +158,7 @@ export default function HomeScreen() {
                   setPincode(t.replace(/\D/g, ''));
                   setChecked(null);
                   setWaitlisted(false);
+                  setWaitlistError(null);
                 }}
                 containerStyle={styles.flex}
               />
@@ -172,6 +174,16 @@ export default function HomeScreen() {
             {serviceability.isFetching ? (
               <View style={styles.pinResult}>
                 <ActivityIndicator size="small" color={colors.primary} />
+              </View>
+            ) : serviceability.isError ? (
+              <View style={styles.pinResult}>
+                <Feather name="alert-circle" size={15} color={colors.destructive} />
+                <Text variant="small" tone="danger" style={styles.flex}>
+                  {apiErrorMessage(
+                    serviceability.error,
+                    'Could not check that pincode just now. Please try again.',
+                  )}
+                </Text>
               </View>
             ) : result ? (
               result.serviceable ? (
@@ -205,17 +217,27 @@ export default function HomeScreen() {
                           router.push('/login');
                           return;
                         }
+                        setWaitlistError(null);
                         try {
                           await joinWaitlist.mutateAsync({
                             data: { pincode: result.pincode, phone: customer.phone },
                           });
                           setWaitlisted(true);
-                        } catch {
-                          setWaitlisted(true);
+                        } catch (err) {
+                          // Claiming "noted" on a failed request means the
+                          // customer waits for a message that will never come.
+                          setWaitlistError(
+                            apiErrorMessage(err, 'Could not add your number. Please try again.'),
+                          );
                         }
                       }}
                     />
                   )}
+                  {waitlistError ? (
+                    <Text variant="small" tone="danger">
+                      {waitlistError}
+                    </Text>
+                  ) : null}
                 </View>
               )
             ) : null}

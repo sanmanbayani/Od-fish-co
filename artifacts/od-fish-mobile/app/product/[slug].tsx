@@ -74,7 +74,24 @@ export default function ProductScreen() {
     );
   }
 
-  if (product.isError || !product.data) {
+  // A request that failed is not the same as a fish we do not stock. Saying
+  // "could not find" for a dropped connection sends people hunting for a
+  // product that is actually right there.
+  if (product.isError) {
+    return (
+      <Screen>
+        <ErrorView
+          message={apiErrorMessage(
+            product.error,
+            'We could not load this fish. Check your connection and try again.',
+          )}
+          onRetry={() => product.refetch()}
+        />
+      </Screen>
+    );
+  }
+
+  if (!product.data) {
     return (
       <Screen>
         <ErrorView

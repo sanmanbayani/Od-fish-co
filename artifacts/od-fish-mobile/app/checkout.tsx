@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +17,8 @@ import { radii, spacing } from '@/constants/colors';
 import { apiErrorMessage, rupees } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
 import { SlotPicker, slotKey } from '@/components/SlotPicker';
+import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
+import { KeyboardStickyFooter } from '@/components/KeyboardStickyFooter';
 import { Text } from '@/components/ui/Text';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -102,6 +104,22 @@ export default function CheckoutScreen() {
     );
   }
 
+  // Without this, a failed request renders as "no saved addresses" and "every
+  // slot for today has closed" — a customer would believe the shop was shut.
+  if (addresses.isError || slots.isError) {
+    return (
+      <Screen>
+        <ErrorView
+          message="Could not load your addresses and delivery slots."
+          onRetry={() => {
+            if (addresses.isError) addresses.refetch();
+            if (slots.isError) slots.refetch();
+          }}
+        />
+      </Screen>
+    );
+  }
+
   if (cart.data.itemCount === 0) {
     return (
       <Screen>
@@ -163,10 +181,11 @@ export default function CheckoutScreen() {
 
   return (
     <Screen>
-      <ScrollView
+      <KeyboardAwareScrollViewCompat
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        bottomOffset={96}
       >
         {/* Address */}
         <View>
@@ -343,9 +362,9 @@ export default function CheckoutScreen() {
             {error}
           </Text>
         ) : null}
-      </ScrollView>
+      </KeyboardAwareScrollViewCompat>
 
-      <View
+      <KeyboardStickyFooter
         style={[
           styles.footer,
           {
@@ -367,7 +386,7 @@ export default function CheckoutScreen() {
           loading={createOrder.isPending || payOrder.isPending}
           onPress={placeOrder}
         />
-      </View>
+      </KeyboardStickyFooter>
     </Screen>
   );
 }
@@ -488,10 +507,6 @@ const styles = StyleSheet.create({
   },
   total: { fontSize: 18 },
   footer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,

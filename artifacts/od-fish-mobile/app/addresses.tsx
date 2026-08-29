@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  Alert,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -115,6 +123,12 @@ export default function AddressesScreen() {
         <ScrollView
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={addresses.isRefetching}
+              onRefresh={() => addresses.refetch()}
+            />
+          }
         >
           {error ? (
             <Text variant="small" tone="danger">
@@ -136,9 +150,9 @@ export default function AddressesScreen() {
                   onPress={() =>
                     router.push({ pathname: '/address-form', params: { id: address.id } })
                   }
-                  hitSlop={10}
+                  hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
                 >
-                  <Feather name="edit-2" size={15} color={colors.mutedForeground} />
+                  <Feather name="edit-2" size={16} color={colors.mutedForeground} />
                 </Pressable>
               </View>
 
@@ -154,7 +168,10 @@ export default function AddressesScreen() {
 
               <View style={[styles.actions, { borderTopColor: colors.border }]}>
                 {!address.isDefault ? (
-                  <Pressable onPress={() => makeDefault(address)} hitSlop={6}>
+                  <Pressable
+                    onPress={() => makeDefault(address)}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  >
                     <Text variant="smallMedium" tone="primary">
                       Set as default
                     </Text>
@@ -162,7 +179,10 @@ export default function AddressesScreen() {
                 ) : (
                   <View />
                 )}
-                <Pressable onPress={() => remove(address)} hitSlop={6}>
+                <Pressable
+                  onPress={() => remove(address)}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
                   <Text variant="smallMedium" tone="danger">
                     Remove
                   </Text>

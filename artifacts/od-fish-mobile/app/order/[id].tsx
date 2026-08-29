@@ -11,7 +11,7 @@ import {
   useReorder,
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
-import { radii, spacing } from '@/constants/colors';
+import { overlay, radii, spacing } from '@/constants/colors';
 import { fonts } from '@/constants/typography';
 import { mediaUrl } from '@/lib/api';
 import {
@@ -145,13 +145,13 @@ export default function OrderScreen() {
             the rider is moving. */}
         {data.deliveryOtp ? (
           <Card tone="deep" style={styles.otpCard}>
-            <Text variant="label" uppercase style={{ color: 'rgba(248,246,241,0.6)' }}>
+            <Text variant="label" uppercase style={{ color: overlay.mutedForeground }}>
               Read this to your rider
             </Text>
             <Text style={[styles.otpValue, { color: colors.deepForeground }]}>
               {data.deliveryOtp.split('').join(' ')}
             </Text>
-            <Text variant="small" style={{ color: 'rgba(248,246,241,0.62)' }}>
+            <Text variant="small" style={{ color: overlay.mutedForeground }}>
               {data.riderName
                 ? `${data.riderName} is on the way${data.riderPhone ? ` · +91 ${data.riderPhone}` : ''}`
                 : 'Your rider is on the way.'}

@@ -22,7 +22,7 @@ export function QtyStepper({
   compact?: boolean;
 }) {
   const colors = useColors();
-  const size = compact ? 28 : 34;
+  const size = compact ? 32 : 36;
 
   const step = (delta: number) => {
     const next = quantity + delta;
@@ -41,7 +41,7 @@ export function QtyStepper({
           borderColor: colors.primary,
           borderRadius: radii.lg,
           backgroundColor: colors.card,
-          height: size + 4,
+          height: size + 8,
         },
       ]}
     >
@@ -50,6 +50,7 @@ export function QtyStepper({
         accessibilityLabel="Decrease quantity"
         onPress={() => step(-1)}
         disabled={busy || quantity <= min}
+        hitSlop={{ top: 8, bottom: 8, left: 10, right: 4 }}
         style={[styles.btn, { width: size, opacity: quantity <= min ? 0.35 : 1 }]}
       >
         <Feather
@@ -72,6 +73,7 @@ export function QtyStepper({
         accessibilityLabel="Increase quantity"
         onPress={() => step(1)}
         disabled={busy || quantity >= max}
+        hitSlop={{ top: 8, bottom: 8, left: 4, right: 10 }}
         style={[styles.btn, { width: size, opacity: quantity >= max ? 0.35 : 1 }]}
       >
         <Feather name="plus" size={compact ? 13 : 15} color={colors.primary} />

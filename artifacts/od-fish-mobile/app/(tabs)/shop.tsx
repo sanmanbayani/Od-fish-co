@@ -1,5 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  FlatList,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -121,6 +128,12 @@ export default function ShopScreen() {
           ItemSeparatorComponent={() => <View style={styles.sep} />}
           showsVerticalScrollIndicator={false}
           keyboardDismissMode="on-drag"
+          refreshControl={
+            <RefreshControl
+              refreshing={products.isRefetching}
+              onRefresh={() => products.refetch()}
+            />
+          }
         />
       )}
 

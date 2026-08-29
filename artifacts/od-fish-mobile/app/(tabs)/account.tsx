@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/Button';
 import { Card, Divider } from '@/components/ui/Card';
 import { TextField } from '@/components/ui/TextField';
 import { EmptyState, LoadingView } from '@/components/ui/StateViews';
+import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { Screen, TAB_BAR_CLEARANCE } from '@/components/ui/Screen';
 
 export default function AccountScreen() {
@@ -114,14 +115,25 @@ export default function AccountScreen() {
 
   return (
     <Screen>
-      <ScrollView
+      <KeyboardAwareScrollViewCompat
         contentContainerStyle={[
           styles.scroll,
           { paddingTop: insets.top + spacing.md },
         ]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        bottomOffset={96}
       >
         <Text variant="title">Account</Text>
+
+        {profile.isError ? (
+          <Text variant="small" tone="danger" style={styles.loadWarning}>
+            {apiErrorMessage(
+              profile.error,
+              'Could not refresh your details just now — showing what we last saved.',
+            )}
+          </Text>
+        ) : null}
 
         <Card style={styles.card}>
           {editing ? (
@@ -132,6 +144,8 @@ export default function AccountScreen() {
                 onChangeText={setFullName}
                 placeholder="Your name"
                 autoCapitalize="words"
+                autoComplete="name"
+                returnKeyType="next"
               />
               <TextField
                 label="Email (optional)"
@@ -140,6 +154,9 @@ export default function AccountScreen() {
                 placeholder="you@example.com"
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoComplete="email"
+                returnKeyType="done"
+                onSubmitEditing={save}
                 error={error}
               />
               <View style={styles.formRow}>
@@ -225,7 +242,7 @@ export default function AccountScreen() {
         <Text variant="tiny" tone="muted" style={styles.version}>
           OD Fish Co. · Elevating fresh seafish, every day
         </Text>
-      </ScrollView>
+      </KeyboardAwareScrollViewCompat>
     </Screen>
   );
 }
@@ -268,6 +285,7 @@ const styles = StyleSheet.create({
     paddingBottom: TAB_BAR_CLEARANCE + 20,
   },
   card: { marginTop: spacing.lg },
+  loadWarning: { marginTop: 8 },
   profileRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: {
     width: 46,
