@@ -18,6 +18,7 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
 let _credentials: RequestCredentials | null = null;
+let _extraHeaders: Record<string, string> | null = null;
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -59,6 +60,20 @@ export function setAuthTokenGetter(getter: AuthTokenGetter | null): void {
  */
 export function setCredentials(mode: RequestCredentials | null): void {
   _credentials = mode;
+}
+
+/**
+ * Attach fixed headers to every request. Headers given on an individual call
+ * still win.
+ *
+ * The Expo app uses this to send `X-Requested-With`, which the API's CSRF
+ * check trusts the same way it trusts a bearer token: a hostile web page
+ * cannot attach a custom header without a CORS preflight the API would refuse,
+ * so its presence proves the caller is the native app (or another deliberate
+ * client), not a browser form. Pass `null` to clear.
+ */
+export function setExtraHeaders(headers: Record<string, string> | null): void {
+  _extraHeaders = headers;
 }
 
 function isRequest(input: RequestInfo | URL): input is Request {
@@ -352,7 +367,11 @@ export async function customFetch<T = unknown>(
     throw new TypeError(`customFetch: ${method} requests cannot have a body.`);
   }
 
-  const headers = mergeHeaders(isRequest(input) ? input.headers : undefined, headersInit);
+  const headers = mergeHeaders(
+    _extraHeaders ?? undefined,
+    isRequest(input) ? input.headers : undefined,
+    headersInit,
+  );
 
   if (
     typeof init.body === "string" &&

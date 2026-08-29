@@ -74,6 +74,15 @@ export function requireTrustedOrigin(req: Request, _res: Response, next: NextFun
   // moment cross-site cookies are switched on in production.
   if (BEARER_TOKEN.test(req.get("authorization") ?? "")) return next();
 
+  // Same reasoning as the bearer token: no web page can attach a *custom*
+  // header — trying forces a CORS preflight this API would refuse — so its
+  // presence proves a deliberate client, not a browser form. The Expo app
+  // sends X-Requested-With on every call. It matters before login: React
+  // Native's own cookie jar replays the session cookie a past login set, and
+  // without this line an OTP request from the phone (cookie, no bearer yet,
+  // no Origin) is refused as a browser that lost its Origin.
+  if (req.get("x-requested-with")) return next();
+
   const cookies = req.cookies as Record<string, string | undefined> | undefined;
   const hasSessionCookie = Boolean(cookies?.[CUSTOMER_COOKIE] ?? cookies?.[STAFF_COOKIE]);
   const issuesSession = SESSION_ISSUING_PATHS.has(req.path);
