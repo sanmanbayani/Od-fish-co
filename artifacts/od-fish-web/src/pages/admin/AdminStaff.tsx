@@ -4,9 +4,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Plus, UserCog } from "lucide-react";
+import { apiErrorMessage } from "@/lib/api-error";
 
 export default function AdminStaff() {
-  const { data: staff, isLoading } = useListStaff();
+  const { data: staff, isLoading, error: loadError } = useListStaff();
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -23,6 +24,12 @@ export default function AdminStaff() {
       <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="p-12 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
+        ) : loadError ? (
+          // An empty table would read as "you have no staff", a different problem.
+          <div className="p-12 text-center space-y-2" data-testid="text-staff-failed">
+            <p className="font-medium">Could not load your staff list.</p>
+            <p className="text-sm text-muted-foreground">{apiErrorMessage(loadError, "Refresh the page to try again.")}</p>
+          </div>
         ) : (
           <Table>
             <TableHeader className="bg-muted/50">

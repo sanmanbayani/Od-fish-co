@@ -59,3 +59,13 @@ frontend takes the blame.
 the screenshot, as separate sequential steps. Suspect a cold start before suspecting the
 bundle, CORS, or the query client. Note that screenshots of an external URL return no browser
 console output, so console logs are not available to break the tie.
+
+## The pooler has a client ceiling, and the dashboard eats into it
+
+Supabase's session-mode pooler caps concurrent clients (currently 15). The admin dashboard
+polls roughly every 30s, and every extra process holding its own pool — a script, a second
+server instance — draws from the same ceiling. When it is hit, requests fail with
+`EMAXCONNSESSION` and the endpoint answers 500; it reads like an application bug but is not.
+
+**How to apply:** keep one-off scripts short-lived and let them exit, and suspect the ceiling
+before the query when a previously fine endpoint starts returning 500 under no real load.

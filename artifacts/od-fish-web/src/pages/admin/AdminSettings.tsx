@@ -11,7 +11,7 @@ import { apiErrorMessage } from "@/lib/api-error";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function AdminSettings() {
-  const { data: settings, isLoading } = useGetSettings();
+  const { data: settings, isLoading, error: loadError } = useGetSettings();
   const updateSettings = useUpdateSettings();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -54,6 +54,13 @@ export default function AdminSettings() {
   };
 
   if (isLoading) return <div className="p-12 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
+  // An empty form here would look editable and save blanks over real settings.
+  if (loadError || !settings) return (
+    <div className="p-12 text-center space-y-2" data-testid="text-settings-failed">
+      <p className="font-medium">Could not load your store settings.</p>
+      <p className="text-sm text-muted-foreground">{apiErrorMessage(loadError, "Refresh the page to try again.")}</p>
+    </div>
+  );
 
   return (
     <div className="space-y-6 max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-500">

@@ -22,7 +22,7 @@ export default function RiderOrderDetails() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  const { data: orders, isLoading } = useListRiderOrders();
+  const { data: orders, isLoading, error: loadError } = useListRiderOrders();
   const order = orders?.find(o => o.id === id);
 
   const [otp, setOtp] = useState("");
@@ -33,6 +33,12 @@ export default function RiderOrderDetails() {
   const startDelivery = useStartRiderDelivery();
 
   if (isLoading) return <div className="p-8 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
+  if (loadError) return (
+    <div className="p-8 text-center space-y-2" data-testid="text-deliveries-failed">
+      <p className="font-medium">Could not load your deliveries.</p>
+      <p className="text-sm text-muted-foreground">{apiErrorMessage(loadError, "Check your signal and try again.")}</p>
+    </div>
+  );
   if (!order) return <div className="p-8 text-center">Order not found</div>;
 
   const handleStartDelivery = () => {

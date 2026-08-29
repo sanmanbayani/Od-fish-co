@@ -51,3 +51,26 @@ through `apiErrorMessage(err, fallback)` in the web app's `lib/api-error.ts`, wh
 the contract's own `error` field — a proxy's HTML page or an upstream's internal `message`
 must fall back rather than reach a staff screen. When a rule refuses an action the UI offers,
 also disable the control and say why, so the refusal is visible before the click, not after.
+
+## Running a one-off script that talks to the database
+
+Scripts that import the db lib pull in `pg`, and that decides how they must be built.
+
+- Bundle to **CJS** (`esbuild --bundle --format=cjs --platform=node`). An ESM bundle dies at
+  runtime with `Dynamic require of "events" is not supported`, because pg requires node
+  builtins dynamically. CJS output means no top-level await, so wrap the script body in an
+  `async function main()` and call it.
+- `--packages=external` is not the escape hatch it looks like. The db lib's package entry
+  resolves to TypeScript source containing directory imports (`./schema`), which node refuses
+  with `ERR_UNSUPPORTED_DIR_IMPORT`. Bundling is what makes those imports work.
+- `--external:pg` fails too: pg is not a direct dependency of the api-server package, so node
+  cannot resolve it from there. It has to be inlined.
+- esbuild lives only at `artifacts/api-server/node_modules/.bin/esbuild`. There is no `tsx`.
+
+**Why:** each of these looks like the obvious fix for the previous one, so it is easy to burn
+an hour cycling through all four.
+
+**How to apply:** pick fixtures (an in-stock variant, an open slot, a serviceable pincode, two
+active riders) by querying the tables directly rather than calling list endpoints and guessing
+whether they answer with an array or a wrapper object. The endpoints are worth exercising in
+the flow itself; they are a poor way to go shopping for test data.

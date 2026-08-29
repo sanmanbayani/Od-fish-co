@@ -20,7 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Clock, MapPin, Phone, User, Package, FileText, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiErrorMessage } from "@/lib/api-error";
+import { apiErrorCode, apiErrorMessage } from "@/lib/api-error";
 import { mediaUrl } from "@/lib/api-config";
 
 export default function AdminOrderDetails() {
@@ -38,7 +38,7 @@ export default function AdminOrderDetails() {
     }
   });
 
-  const { data: staffList } = useListStaff();
+  const { data: staffList, error: staffError } = useListStaff();
   const riders = staffList?.filter(s => s.role === 'RIDER' && s.isActive) || [];
 
   const updateStatus = useUpdateAdminOrderStatus();
@@ -64,6 +64,16 @@ export default function AdminOrderDetails() {
       },
       onError: (err: any) => {
         toast({ title: "Failed to update", description: apiErrorMessage(err, "Could not update the order. Please try again."), variant: "destructive" });
+        // Another desk got there first. Pull the real status back so the buttons
+        // stop offering a move that has already happened.
+        if (apiErrorCode(err) === "stale_status") {
+          // Shut the desk-close dialog before the refresh lands, or it goes on
+          // offering "Mark delivered" for an order that has already moved on.
+          setDeskClose(false);
+          setOverrideReason("");
+          setCashIn(false);
+          queryClient.invalidateQueries({ queryKey: getGetAdminOrderQueryKey(id!) });
+        }
       }
     });
   };
@@ -343,6 +353,11 @@ export default function AdminOrderDetails() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {staffError && (
+                    <p className="text-xs text-destructive" data-testid="text-riders-failed">
+                      Could not load the rider list — {apiErrorMessage(staffError, "refresh the page to try again.")}
+                    </p>
+                  )}
                 </div>
               )}
             </CardContent>

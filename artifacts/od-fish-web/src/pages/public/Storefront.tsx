@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useGetPublicSummary, useCheckServiceability, getCheckServiceabilityQueryKey, useJoinWaitlist } from "@workspace/api-client-react";
 import { formatPaise, formatWeightRange } from "@/lib/format";
+import { apiErrorMessage } from "@/lib/api-error";
 import { mediaUrl } from "@/lib/api-config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,7 @@ export default function Storefront() {
   const [pincode, setPincode] = useState("");
   const [phone, setPhone] = useState("");
   const [checkPincode, setCheckPincode] = useState("");
-  const { data: serviceability, isLoading: isChecking } = useCheckServiceability(checkPincode, {
+  const { data: serviceability, isLoading: isChecking, error: checkError } = useCheckServiceability(checkPincode, {
     query: {
       enabled: checkPincode.length === 6,
       retry: false,
@@ -103,6 +104,12 @@ export default function Storefront() {
                 </Button>
               </form>
 
+              {checkPincode && checkError && (
+                <div className="mt-4 pt-4 border-t border-border text-sm font-medium text-destructive" data-testid="text-check-failed">
+                  {apiErrorMessage(checkError, "Could not check that pincode just now. Please try again.")}
+                </div>
+              )}
+
               {checkPincode && serviceability && (
                 <div className="mt-4 pt-4 border-t border-border animate-in fade-in slide-in-from-top-2">
                   {serviceability.serviceable ? (
@@ -132,6 +139,11 @@ export default function Storefront() {
                               Join Waitlist
                             </Button>
                           </div>
+                          {joinWaitlist.isError && (
+                            <p className="text-sm font-medium" data-testid="text-waitlist-error">
+                              {apiErrorMessage(joinWaitlist.error, "Could not add your number just now. Please try again.")}
+                            </p>
+                          )}
                         </form>
                       ) : (
                         <div className="bg-green-50 text-green-700 p-3 rounded flex items-center gap-2">
