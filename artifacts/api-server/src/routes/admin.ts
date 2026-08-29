@@ -190,12 +190,46 @@ router.get("/dashboard", requireOps, async (_req, res) => {
       : [];
   const customerById = new Map(customerRows.map((row) => [row.id, row]));
 
-  const slotCounts = await db
-    .select({ slotId: orders.slotId, count: sql<number>`count(*)::int` })
-    .from(orders)
-    .where(and(eq(orders.deliveryDate, today), sql`${orders.status} <> 'CANCELLED'`))
-    .groupBy(orders.slotId);
-  const slotCountById = new Map(slotCounts.map((row) => [row.slotId, row.count]));
+  // The board lists the next few slot *instances*, and one slot definition
+  // recurs across several days, so a count keyed by slot id alone would show
+  // today's bookings against tomorrow's row. Key on the (slot, date) pair.
+  //
+  // Cancelled and failed orders are excluded to match what checkout counts when
+  // it enforces capacity — otherwise the board disagrees with the door about
+  // whether a slot is full.
+  const slotWindow = upcomingSlots(slotRows, {
+    storeOpen: settings.storeOpen,
+    limit: 4,
+  });
+  const slotInstanceKey = (slotId: string, deliveryDate: string) =>
+    `${slotId}|${deliveryDate}`;
+  const slotDates = [...new Set(slotWindow.map((slot) => slot.deliveryDate))];
+  const slotCounts = slotDates.length
+    ? await db
+        .select({
+          slotId: orders.slotId,
+          deliveryDate: orders.deliveryDate,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(orders)
+        .where(
+          and(
+            inArray(orders.deliveryDate, slotDates),
+            sql`${orders.status} NOT IN ('CANCELLED', 'FAILED')`,
+          ),
+        )
+        .groupBy(orders.slotId, orders.deliveryDate)
+    : [];
+  const slotCountByInstance = new Map(
+    slotCounts.flatMap((row) =>
+      // An order whose slot definition was deleted keeps its delivery date but
+      // loses the link, so it can never match an upcoming instance. Leaving it
+      // out here is what keeps the map keys non-null.
+      row.slotId
+        ? ([[slotInstanceKey(row.slotId, row.deliveryDate), row.count]] as const)
+        : [],
+    ),
+  );
 
   const statusBreakdown = statusRows.map((row) => ({
     status: row.status,
@@ -235,14 +269,13 @@ router.get("/dashboard", requireOps, async (_req, res) => {
       }),
     ),
     lowStock: lowStockRows.map((row) => serializeInventoryRow(row)),
-    slotLoad: upcomingSlots(slotRows, { storeOpen: settings.storeOpen, limit: 4 }).map(
-      (slot) => ({
-        slotId: slot.id,
-        label: slot.label,
-        orders: slotCountById.get(slot.id) ?? 0,
-        capacity: slot.capacity,
-      }),
-    ),
+    slotLoad: slotWindow.map((slot) => ({
+      slotId: slot.id,
+      deliveryDate: slot.deliveryDate,
+      label: slot.label,
+      orders: slotCountByInstance.get(slotInstanceKey(slot.id, slot.deliveryDate)) ?? 0,
+      capacity: slot.capacity,
+    })),
   });
 });
 

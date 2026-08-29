@@ -8,13 +8,23 @@ import { countdown, deliveryDate } from '@/lib/format';
 import { Text } from '@/components/ui/Text';
 import { Badge } from '@/components/ui/Badge';
 
+/**
+ * A slot id names a recurring window, not a single delivery — the same window
+ * is offered for several days running. Identity has to include the date, or
+ * three different days collapse into one as far as React keys and the
+ * selection state are concerned.
+ */
+export function slotKey(slot: Pick<DeliverySlot, 'id' | 'deliveryDate'>) {
+  return `${slot.id}|${slot.deliveryDate}`;
+}
+
 export function SlotPicker({
   slots,
-  selectedId,
+  selectedKey,
   onSelect,
 }: {
   slots: DeliverySlot[];
-  selectedId: string | null;
+  selectedKey: string | null;
   onSelect: (slot: DeliverySlot) => void;
 }) {
   const colors = useColors();
@@ -22,11 +32,12 @@ export function SlotPicker({
   return (
     <View style={styles.list}>
       {slots.map((slot) => {
-        const selected = slot.id === selectedId;
+        const key = slotKey(slot);
+        const selected = key === selectedKey;
         const left = countdown(slot.secondsToCutoff);
         return (
           <Pressable
-            key={slot.id}
+            key={key}
             disabled={!slot.isOpen}
             onPress={() => onSelect(slot)}
             style={({ pressed }) => [

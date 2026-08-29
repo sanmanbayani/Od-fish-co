@@ -8,6 +8,8 @@
 
 export interface SlotLoad {
   slotId: string;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  deliveryDate: string;
   label: string;
   orders: number;
   capacity: number;

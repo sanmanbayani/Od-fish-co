@@ -781,9 +781,13 @@ export const ListOrdersResponse = zod.array(ListOrdersResponseItem)
 /**
  * @summary Place an order - all totals are computed server-side from live prices
  */
+export const createOrderBodyDeliveryDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
 export const CreateOrderBody = zod.object({
   "addressId": zod.string(),
   "slotId": zod.string(),
+  "deliveryDate": zod.string().regex(createOrderBodyDeliveryDateRegExp),
   "paymentMethod": zod.enum(['COD', 'UPI', 'CARD', 'NETBANKING']),
   "customerNote": zod.string().optional()
 })
@@ -1125,6 +1129,9 @@ export const GetCurrentStaffResponse = zod.object({
 /**
  * @summary Today's operating picture - counts, revenue, action queue, low stock
  */
+export const getAdminDashboardResponseSlotLoadItemDeliveryDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
 export const GetAdminDashboardResponse = zod.object({
   "storeOpen": zod.boolean(),
   "ordersToday": zod.number().int(),
@@ -1217,6 +1224,7 @@ export const GetAdminDashboardResponse = zod.object({
 })),
   "slotLoad": zod.array(zod.object({
   "slotId": zod.string(),
+  "deliveryDate": zod.string().regex(getAdminDashboardResponseSlotLoadItemDeliveryDateRegExp),
   "label": zod.string(),
   "orders": zod.number().int(),
   "capacity": zod.number().int()

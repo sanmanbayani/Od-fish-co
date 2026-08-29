@@ -1,14 +1,13 @@
 import { defineConfig } from "drizzle-kit";
 import path from "path";
+import { resolveConnectionString } from "./src/connection";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL, ensure the database is provisioned");
-}
-
+// Resolved through the same helper the runtime uses, so `push` can never target
+// a different database than the application does.
 export default defineConfig({
   schema: path.join(__dirname, "./src/schema/index.ts"),
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL,
+    url: resolveConnectionString(),
   },
 });

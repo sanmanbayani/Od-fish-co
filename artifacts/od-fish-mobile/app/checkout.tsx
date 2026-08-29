@@ -16,7 +16,7 @@ import { useColors } from '@/hooks/useColors';
 import { radii, spacing } from '@/constants/colors';
 import { apiErrorMessage, rupees } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
-import { SlotPicker } from '@/components/SlotPicker';
+import { SlotPicker, slotKey } from '@/components/SlotPicker';
 import { Text } from '@/components/ui/Text';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -58,7 +58,7 @@ export default function CheckoutScreen() {
   const payOrder = usePayOrder();
 
   const [addressId, setAddressId] = useState<string | null>(null);
-  const [slotId, setSlotId] = useState<string | null>(null);
+  const [selectedSlotKey, setSelectedSlotKey] = useState<string | null>(null);
   const [payment, setPayment] = useState<OrderInputPaymentMethod>('UPI');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -77,8 +77,10 @@ export default function CheckoutScreen() {
   }, [addresses.data, addressId]);
 
   useEffect(() => {
-    if (!slotId && openSlots.length > 0) setSlotId(openSlots[0].id);
-  }, [openSlots, slotId]);
+    if (!selectedSlotKey && openSlots.length > 0) {
+      setSelectedSlotKey(slotKey(openSlots[0]));
+    }
+  }, [openSlots, selectedSlotKey]);
 
   useEffect(() => {
     if (cart.data && !cart.data.codAvailable && payment === 'COD') setPayment('UPI');
@@ -115,17 +117,21 @@ export default function CheckoutScreen() {
 
   const addressList = addresses.data ?? [];
   const selectedAddress = addressList.find((a) => a.id === addressId) ?? null;
+  const selectedSlot = openSlots.find((s) => slotKey(s) === selectedSlotKey) ?? null;
   const canPlace =
-    Boolean(selectedAddress?.isServiceable) && Boolean(slotId) && !createOrder.isPending;
+    Boolean(selectedAddress?.isServiceable) &&
+    Boolean(selectedSlot) &&
+    !createOrder.isPending;
 
   const placeOrder = async () => {
     setError(null);
-    if (!addressId || !slotId) return;
+    if (!addressId || !selectedSlot) return;
     try {
       const order = await createOrder.mutateAsync({
         data: {
           addressId,
-          slotId,
+          slotId: selectedSlot.id,
+          deliveryDate: selectedSlot.deliveryDate,
           paymentMethod: payment,
           ...(note.trim() ? { customerNote: note.trim() } : {}),
         },
@@ -223,8 +229,8 @@ export default function CheckoutScreen() {
           ) : (
             <SlotPicker
               slots={slots.data ?? []}
-              selectedId={slotId}
-              onSelect={(slot) => setSlotId(slot.id)}
+              selectedKey={selectedSlotKey}
+              onSelect={(slot) => setSelectedSlotKey(slotKey(slot))}
             />
           )}
         </View>

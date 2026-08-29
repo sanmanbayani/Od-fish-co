@@ -1,16 +1,15 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "./schema";
+import { describeConnection, resolveConnectionString } from "./connection";
 
 const { Pool } = pg;
 
-const connectionString = process.env.DATABASE_URL;
+const connectionString = resolveConnectionString();
 
-if (!connectionString) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
-}
+// Which database this process actually reached is the first thing worth knowing
+// when the data looks wrong, and the one thing the code alone cannot tell you.
+console.info(`[db] Using ${describeConnection(connectionString)}`);
 
 /**
  * Local Postgres speaks plaintext on the loopback interface; every hosted
@@ -60,7 +59,11 @@ function sslConfig(url: string) {
   if (ca) return { ca, rejectUnauthorized: true };
 
   console.warn(
-    "[db] Connecting over TLS without certificate verification. Set DATABASE_CA_CERT to the provider's CA certificate to verify the server identity.",
+    "[db] TLS is on but the server's identity is NOT verified: traffic is " +
+      "encrypted, yet anything positioned between this process and the database " +
+      "could impersonate it. Before launch, download the CA certificate from the " +
+      "Supabase dashboard (Settings > Database > SSL Configuration) and set " +
+      "DATABASE_CA_CERT to its contents.",
   );
   return { rejectUnauthorized: false };
 }

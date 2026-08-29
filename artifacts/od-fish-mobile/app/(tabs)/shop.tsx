@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useListCategories, useListProducts } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { radii, spacing } from '@/constants/colors';
+import { CATALOGUE_POLL_MS } from '@/constants/query';
 import { CartBar } from '@/components/CartBar';
 import { ProductRow } from '@/components/ProductRow';
 import { Text } from '@/components/ui/Text';
@@ -35,7 +36,10 @@ export default function ShopScreen() {
     [category, debounced],
   );
   const products = useListProducts(query, {
-    query: { queryKey: ['products', category, debounced] },
+    query: {
+      queryKey: ['products', category, debounced],
+      refetchInterval: CATALOGUE_POLL_MS,
+    },
   });
 
   const chips = [

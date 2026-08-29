@@ -50,6 +50,21 @@ for unserved pincodes. Handover is confirmed by an OTP the customer reads to the
 **Why:** cutting capacity is finite per slot, and an unserviceable pincode discovered at
 checkout is a lost customer — better to capture it as demand data.
 
+## A slot id is not a delivery
+
+A slot row is a *recurring window* ("7 PM – 10 PM"). The API expands each row into one
+instance per upcoming day, so several instances share a single slot id. Anything that
+identifies, counts, keys or looks up a delivery must use the pair (slot id, delivery date).
+
+**Why:** matching on the id alone silently resolves to the earliest instance. That has
+already shipped two bugs — an order placed for tomorrow was scheduled for today, and the
+admin capacity board showed today's booking count against tomorrow's row. Both render
+plausibly on screen, which is exactly why neither was caught by eye.
+
+**How to apply:** any endpoint, query, React key or capacity check touching slots carries
+the date alongside the id. A function that takes only a slot id and returns something
+delivery-specific is wrong by construction.
+
 # Marathi alongside English
 
 Product names carry a local (Marathi) name displayed with the English one.

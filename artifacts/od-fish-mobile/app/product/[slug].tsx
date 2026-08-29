@@ -15,6 +15,7 @@ import type { ProductVariant } from '@workspace/api-client-react';
 import { useAddCartItem, useGetProduct } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { radii, spacing } from '@/constants/colors';
+import { CATALOGUE_POLL_MS } from '@/constants/query';
 import { mediaUrl } from '@/lib/api';
 import {
   apiErrorMessage,
@@ -41,7 +42,11 @@ export default function ProductScreen() {
   const queryClient = useQueryClient();
 
   const product = useGetProduct(slug, {
-    query: { queryKey: ['product', slug], enabled: Boolean(slug) },
+    query: {
+      queryKey: ['product', slug],
+      enabled: Boolean(slug),
+      refetchInterval: CATALOGUE_POLL_MS,
+    },
   });
   const addToCart = useAddCartItem();
 

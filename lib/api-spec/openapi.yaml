@@ -1705,10 +1705,18 @@ components:
 
     OrderInput:
       type: object
-      required: [addressId, slotId, paymentMethod]
+      required: [addressId, slotId, deliveryDate, paymentMethod]
       properties:
         addressId: { type: string }
+        # A slot id names a recurring window ("7 AM - 10 AM"), not one delivery.
+        # The same window is offered for several days at once, so the id alone
+        # is ambiguous and the date is what picks one out. Sending only the id
+        # means the server has to guess, and guessing wrong schedules the order
+        # on a day the customer did not choose.
         slotId: { type: string }
+        deliveryDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
         paymentMethod: { type: string, enum: [COD, UPI, CARD, NETBANKING] }
         customerNote: { type: string }
 
@@ -1788,9 +1796,15 @@ components:
 
     SlotLoad:
       type: object
-      required: [slotId, label, orders, capacity]
+      required: [slotId, deliveryDate, label, orders, capacity]
       properties:
+        # slotId alone does not identify a row here. The same recurring window
+        # appears once per upcoming day, so the date is part of the identity —
+        # without it the board shows today's booking count against tomorrow.
         slotId: { type: string }
+        deliveryDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
         label: { type: string }
         orders: { type: integer }
         capacity: { type: integer }

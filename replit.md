@@ -50,11 +50,21 @@ package.
 - **Fixed packs with disclosed weight ranges.** Each variant carries a gross weight and a
   net edible weight *range*. Sea fish loses a lot to cleaning and never weighs the same
   twice, so we price the pack, not the gram, and show the range before purchase.
+- **A slot id is not a delivery.** A slot row is a *recurring window* ("7 PM – 10 PM"); the
+  API expands it into one instance per upcoming day, so several instances share one id.
+  Every endpoint, query, React key and capacity check must use the pair (slot id, delivery
+  date). Matching on the id alone silently resolves to the earliest instance — that has
+  already scheduled a tomorrow order for today, and shown today's booking count against
+  tomorrow's row on the admin board. Both looked plausible on screen.
 - **Auth transport differs by surface.** Staff on web use httpOnly cookies; the Expo app
   uses a bearer token in AsyncStorage. React Native has no dependable cross-platform
   cookie jar, and httpOnly is the right XSS posture on web.
-- **The database is deliberately portable.** Everything reaches Postgres through
-  `DATABASE_URL`. Repointing that one variable is all it takes to move hosts.
+- **The database is deliberately portable.** Everything reaches Postgres through one
+  resolver: the `SUPABASE_DB_HOST` / `SUPABASE_DB_USER` / `SUPABASE_DB_PASSWORD` trio when
+  all three are set, otherwise `DATABASE_URL`. The trio exists because a password embedded
+  in a URI has to be percent-encoded, and a mis-encoded one surfaces as "password
+  authentication failed" — which sends you hunting the wrong problem. A half-filled trio
+  refuses to boot rather than quietly reading and writing the wrong database.
 - **Errors use one contract: `{ error, code }`.** Clients read `code` for branching and
   `error` for display.
 - **Landing, admin, and rider share one web app** because staff tools share a session and
@@ -107,6 +117,12 @@ package.
   clear. They are two separate flags on purpose: demo logins should not silently also
   mean free checkout. The API logs a warning on every boot while either is set, and the
   mobile login screen shows a notice. Unset both before real customers.
+- **Verify the database's TLS certificate before launch.** The Supabase pooler presents a
+  self-signed chain, so without `DATABASE_CA_CERT` the connection is encrypted but the
+  server's identity is unproven — anything sitting between the API and the database could
+  impersonate it. Download the CA from the Supabase dashboard (Settings → Database → SSL
+  Configuration) and set `DATABASE_CA_CERT` to its contents. The API warns on every boot
+  until you do.
 - **Gating is by allow-list, never by absence.** `IS_DEVELOPMENT` names the safe
   environments (`development`, `test`); anything else — including an unset `NODE_ENV` —
   counts as public. Never reintroduce a `NODE_ENV !== "production"` check; it fails open

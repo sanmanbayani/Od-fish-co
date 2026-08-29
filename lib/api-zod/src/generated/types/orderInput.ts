@@ -10,6 +10,8 @@ import type { OrderInputPaymentMethod } from './orderInputPaymentMethod';
 export interface OrderInput {
   addressId: string;
   slotId: string;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  deliveryDate: string;
   paymentMethod: OrderInputPaymentMethod;
   customerNote?: string;
 }

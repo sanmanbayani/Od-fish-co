@@ -29,6 +29,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { LoadingView, ErrorView } from '@/components/ui/StateViews';
+import { CATALOGUE_POLL_MS } from '@/constants/query';
 import { Screen, TAB_BAR_CLEARANCE } from '@/components/ui/Screen';
 
 export default function HomeScreen() {
@@ -41,7 +42,9 @@ export default function HomeScreen() {
   const [checked, setChecked] = useState<string | null>(null);
   const [waitlisted, setWaitlisted] = useState(false);
 
-  const feed = useGetHomeFeed({ query: { queryKey: ['home'] } });
+  const feed = useGetHomeFeed({
+    query: { queryKey: ['home'], refetchInterval: CATALOGUE_POLL_MS },
+  });
   const serviceability = useCheckServiceability(checked ?? '', {
     query: { queryKey: ['serviceability', checked], enabled: Boolean(checked) },
   });

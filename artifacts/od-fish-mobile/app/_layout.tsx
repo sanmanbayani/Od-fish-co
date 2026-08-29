@@ -3,7 +3,12 @@
 import '@/lib/api';
 
 import React, { useEffect } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AppState, type AppStateStatus, Platform } from 'react-native';
+import {
+  focusManager,
+  QueryClient,
+  QueryClientProvider,
+} from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -37,10 +42,25 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       staleTime: 30_000,
-      refetchOnWindowFocus: false,
+      // React Query's "window focus" has no native equivalent, so it is driven
+      // from AppState below. Without that wiring this flag does nothing on iOS
+      // or Android.
+      refetchOnWindowFocus: true,
     },
   },
 });
+
+/**
+ * Returning to the app refetches anything stale — most importantly stock, so a
+ * customer who left mid-browse does not come back to a sold-out item still
+ * showing as available. This also gates the catalogue poll timers: React Query
+ * pauses intervals while unfocused, so a backgrounded app stops polling.
+ */
+function onAppStateChange(status: AppStateStatus) {
+  if (Platform.OS !== 'web') {
+    focusManager.setFocused(status === 'active');
+  }
+}
 
 function RootLayoutNav() {
   return (
@@ -89,6 +109,11 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', onAppStateChange);
+    return () => subscription.remove();
+  }, []);
 
   if (!fontsLoaded && !fontError) return null;
 

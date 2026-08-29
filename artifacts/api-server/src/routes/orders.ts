@@ -84,8 +84,15 @@ router.post("/", async (req, res) => {
     .where(eq(deliverySlots.isActive, true))
     .orderBy(asc(deliverySlots.sortOrder));
 
+  // Match on the date as well as the id. `upcomingSlots` expands each slot
+  // definition across the next few days, so several candidates share one id and
+  // matching by id alone silently returns the earliest — scheduling a delivery
+  // the customer never asked for, and counting its capacity against the wrong
+  // day.
   const slot = upcomingSlots(slotRows, { storeOpen: settings.storeOpen }).find(
-    (candidate) => candidate.id === body.slotId,
+    (candidate) =>
+      candidate.id === body.slotId &&
+      candidate.deliveryDate === body.deliveryDate,
   );
 
   if (!slot) {

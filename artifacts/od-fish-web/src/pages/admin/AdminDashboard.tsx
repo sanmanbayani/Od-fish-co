@@ -130,12 +130,12 @@ export default function AdminDashboard() {
         {/* Slot Load */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Slot Load (Today)</CardTitle>
+            <CardTitle className="text-lg">Slot Load (Upcoming)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {dashboard.slotLoad.map(slot => (
-                <div key={slot.slotId} className="flex flex-col gap-1.5">
+                <div key={`${slot.slotId}|${slot.deliveryDate}`} className="flex flex-col gap-1.5">
                   <div className="flex justify-between text-sm">
                     <span className="font-medium">{slot.label}</span>
                     <span className="text-muted-foreground">{slot.orders} / {slot.capacity}</span>
@@ -150,7 +150,7 @@ export default function AdminDashboard() {
               ))}
               {dashboard.slotLoad.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground text-sm">
-                  No active slots today.
+                  No upcoming slots.
                 </div>
               )}
             </div>
