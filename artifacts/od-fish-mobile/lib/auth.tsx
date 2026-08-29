@@ -11,6 +11,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { Customer, CustomerSession } from '@workspace/api-client-react';
 import { router } from 'expo-router';
 import { setCurrentToken } from '@/lib/api';
+import {
+  clearPushRegistration,
+  syncPushRegistration,
+} from '@/lib/notifications';
 
 const TOKEN_KEY = 'odfish.session.token';
 const CUSTOMER_KEY = 'odfish.session.customer';
@@ -50,6 +54,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (storedToken) {
           setCurrentToken(storedToken);
           setToken(storedToken);
+          // Tokens are reissued by the OS from time to time, so a returning
+          // customer re-registers rather than going quiet after an update.
+          void syncPushRegistration();
         }
         if (storedCustomer) {
           setCustomerState(JSON.parse(storedCustomer) as Customer);
@@ -76,11 +83,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ]);
       // Cart, addresses and orders are all per-customer.
       await queryClient.invalidateQueries();
+      // Attach this phone to the account that just signed in. Deliberately not
+      // awaited: the permission prompt must not hold up the login screen.
+      void syncPushRegistration();
     },
     [queryClient],
   );
 
   const signOut = useCallback(async () => {
+    // Before the token goes: the API needs the session to know whose device
+    // this is, and the next person on this handset must not inherit someone
+    // else's order updates.
+    await clearPushRegistration();
     setCurrentToken(null);
     setToken(null);
     setCustomerState(null);

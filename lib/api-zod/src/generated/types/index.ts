@@ -61,6 +61,8 @@ export * from './productUpdate';
 export * from './productVariant';
 export * from './productVariantSoldBy';
 export * from './publicSummary';
+export * from './pushDeviceInput';
+export * from './pushDeviceInputPlatform';
 export * from './revenuePoint';
 export * from './riderAssignmentInput';
 export * from './riderOrder';

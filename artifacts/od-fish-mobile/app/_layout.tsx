@@ -29,12 +29,14 @@ import {
   Inter_700Bold,
   useFonts,
 } from '@expo-google-fonts/inter';
-import { Stack } from 'expo-router';
+import * as Notifications from 'expo-notifications';
+import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import colors from '@/constants/colors';
 import { fonts } from '@/constants/typography';
 import { AuthProvider } from '@/lib/auth';
+import { orderIdFrom } from '@/lib/notifications';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -63,7 +65,33 @@ function onAppStateChange(status: AppStateStatus) {
   }
 }
 
+/**
+ * Tapping an order update opens that order.
+ *
+ * `useLastNotificationResponse` covers both cases with one code path: a tap
+ * while the app is running, and a tap that launched the app from cold. It keeps
+ * returning the same response, so the identifier is remembered to avoid pushing
+ * the same screen twice.
+ */
+function useNotificationRouting() {
+  const response = Notifications.useLastNotificationResponse();
+  const handledRef = React.useRef<string | null>(null);
+
+  useEffect(() => {
+    const orderId = orderIdFrom(response);
+    if (!orderId || !response) return;
+
+    const key = response.notification.request.identifier;
+    if (handledRef.current === key) return;
+    handledRef.current = key;
+
+    router.push(`/order/${orderId}`);
+  }, [response]);
+}
+
 function RootLayoutNav() {
+  useNotificationRouting();
+
   return (
     <Stack
       screenOptions={{

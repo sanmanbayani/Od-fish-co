@@ -101,6 +101,33 @@ export const customerSessions = pgTable(
   (table) => [index("customer_sessions_customer_idx").on(table.customerId)],
 );
 
+/**
+ * Where a customer's order updates are pushed.
+ *
+ * One row per install, keyed by the Expo push token because that is what the
+ * push service addresses. The same phone can be signed into a different
+ * account tomorrow, so the token — not the customer — is unique: re-registering
+ * moves it, it never fans a stranger's notifications out to an old owner.
+ */
+export const pushDevices = pgTable(
+  "push_devices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    platform: varchar("platform", { length: 16 }),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("push_devices_customer_idx").on(table.customerId)],
+);
+
 export const addresses = pgTable(
   "addresses",
   {

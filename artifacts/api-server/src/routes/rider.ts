@@ -3,6 +3,7 @@ import { customers, db, orders } from "@workspace/db";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { badRequest, conflict, notFound, parseBody, unauthorized } from "../lib/http";
+import { notifyOrderStatus } from "../lib/push";
 import {
   loadOrderBundles,
   MAX_DELIVERY_OTP_ATTEMPTS,
@@ -172,6 +173,8 @@ router.post("/orders/:id/verify-otp", async (req, res) => {
     "Delivery confirmed by OTP",
   );
 
+  notifyOrderStatus(delivered);
+
   const [serialized] = await serializeForRider([delivered]);
   res.json(serialized);
 });
@@ -227,6 +230,8 @@ router.post("/orders/:id/start", async (req, res) => {
 
     return row;
   });
+
+  notifyOrderStatus(updated);
 
   const [serialized] = await serializeForRider([updated]);
   res.json(serialized);

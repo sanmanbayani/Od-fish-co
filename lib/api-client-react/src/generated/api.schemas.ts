@@ -13,6 +13,24 @@ export interface OkResult {
   ok: boolean;
 }
 
+export type PushDeviceInputPlatform = typeof PushDeviceInputPlatform[keyof typeof PushDeviceInputPlatform];
+
+
+export const PushDeviceInputPlatform = {
+  ios: 'ios',
+  android: 'android',
+} as const;
+
+export interface PushDeviceInput {
+  /**
+     * The Expo push token this install was issued, e.g. `ExponentPushToken[xxxxxxxx]`.
+     * @minLength 10
+     * @maxLength 255
+     */
+  token: string;
+  platform?: PushDeviceInputPlatform;
+}
+
 export interface VariantDeleteResult {
   ok: boolean;
   /** True when the pack was removed outright. False when it was archived instead, because a past order still refers to it. */

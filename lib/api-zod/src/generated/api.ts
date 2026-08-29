@@ -1084,6 +1084,42 @@ export const ReorderResponse = zod.object({
 })
 
 
+/**
+ * @summary Register this phone to receive order updates
+ */
+export const registerPushDeviceBodyTokenMin = 10;
+export const registerPushDeviceBodyTokenMax = 255;
+
+
+
+export const RegisterPushDeviceBody = zod.object({
+  "token": zod.string().min(registerPushDeviceBodyTokenMin).max(registerPushDeviceBodyTokenMax).describe('The Expo push token this install was issued, e.g. `ExponentPushToken[xxxxxxxx]`.'),
+  "platform": zod.enum(['ios', 'android']).optional()
+})
+
+export const RegisterPushDeviceResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Stop sending order updates to this phone
+ */
+export const unregisterPushDeviceBodyTokenMin = 10;
+export const unregisterPushDeviceBodyTokenMax = 255;
+
+
+
+export const UnregisterPushDeviceBody = zod.object({
+  "token": zod.string().min(unregisterPushDeviceBodyTokenMin).max(unregisterPushDeviceBodyTokenMax).describe('The Expo push token this install was issued, e.g. `ExponentPushToken[xxxxxxxx]`.'),
+  "platform": zod.enum(['ios', 'android']).optional()
+})
+
+export const UnregisterPushDeviceResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
 
 
 

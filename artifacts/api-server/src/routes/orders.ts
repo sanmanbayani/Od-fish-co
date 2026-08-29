@@ -21,6 +21,7 @@ import {
   recordOrderEvent,
   serializeCustomerOrder,
 } from "../lib/orders";
+import { notifyOrderStatus } from "../lib/push";
 import { newOrderNumber, numericCode } from "../lib/security";
 import { computeBill, getStoreSettings } from "../lib/store";
 import { istDateString, upcomingSlots } from "../lib/time";
@@ -274,6 +275,11 @@ router.post("/", async (req, res) => {
     actorId: customer.id,
   });
 
+  // A cash order is live the moment it is placed, so it is worth a push. A
+  // prepaid one is still PENDING_PAYMENT here and gets its notification when
+  // the payment settles.
+  notifyOrderStatus(created);
+
   const [bundle] = await loadOrderBundles([created]);
   res.status(201).json(serializeCustomerOrder(bundle!));
 });
@@ -360,6 +366,10 @@ router.post("/:id/pay", async (req, res) => {
 
     return row;
   });
+
+  // Only a successful settlement is worth a message: the order has just become
+  // real. A failed one is already on the screen the customer is looking at.
+  notifyOrderStatus(updated);
 
   const [bundle] = await loadOrderBundles([updated]);
   res.json(serializeCustomerOrder(bundle!));

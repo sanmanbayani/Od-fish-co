@@ -61,6 +61,7 @@ import type {
   ProductUpdate,
   ProductVariant,
   PublicSummary,
+  PushDeviceInput,
   RiderAssignmentInput,
   RiderOrder,
   Serviceability,
@@ -2125,6 +2126,148 @@ export const useReorder = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getReorderMutationOptions(options));
+    }
+
+export const getRegisterPushDeviceUrl = () => {
+
+
+
+
+  return `/api/notifications/devices`
+}
+
+/**
+ * @summary Register this phone to receive order updates
+ */
+export const registerPushDevice = async (pushDeviceInput: PushDeviceInput, options?: Parameters<typeof customFetch>[1]): Promise<OkResult> => {
+
+  return customFetch<OkResult>(getRegisterPushDeviceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pushDeviceInput)
+  }
+);}
+
+
+
+
+
+export const getRegisterPushDeviceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerPushDevice>>, TError,{data: BodyType<PushDeviceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof registerPushDevice>>, TError,{data: BodyType<PushDeviceInput>}, TContext> => {
+
+const mutationKey = ['registerPushDevice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof registerPushDevice>>, {data: BodyType<PushDeviceInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  registerPushDevice(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegisterPushDeviceMutationResult = NonNullable<Awaited<ReturnType<typeof registerPushDevice>>>
+    export type RegisterPushDeviceMutationBody = BodyType<PushDeviceInput>
+    export type RegisterPushDeviceMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Register this phone to receive order updates
+ */
+export const useRegisterPushDevice = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerPushDevice>>, TError,{data: BodyType<PushDeviceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof registerPushDevice>>,
+        TError,
+        {data: BodyType<PushDeviceInput>},
+        TContext
+      > => {
+      return useMutation(getRegisterPushDeviceMutationOptions(options));
+    }
+
+export const getUnregisterPushDeviceUrl = () => {
+
+
+
+
+  return `/api/notifications/devices/unregister`
+}
+
+/**
+ * @summary Stop sending order updates to this phone
+ */
+export const unregisterPushDevice = async (pushDeviceInput: PushDeviceInput, options?: Parameters<typeof customFetch>[1]): Promise<OkResult> => {
+
+  return customFetch<OkResult>(getUnregisterPushDeviceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pushDeviceInput)
+  }
+);}
+
+
+
+
+
+export const getUnregisterPushDeviceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unregisterPushDevice>>, TError,{data: BodyType<PushDeviceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unregisterPushDevice>>, TError,{data: BodyType<PushDeviceInput>}, TContext> => {
+
+const mutationKey = ['unregisterPushDevice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unregisterPushDevice>>, {data: BodyType<PushDeviceInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  unregisterPushDevice(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnregisterPushDeviceMutationResult = NonNullable<Awaited<ReturnType<typeof unregisterPushDevice>>>
+    export type UnregisterPushDeviceMutationBody = BodyType<PushDeviceInput>
+    export type UnregisterPushDeviceMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Stop sending order updates to this phone
+ */
+export const useUnregisterPushDevice = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unregisterPushDevice>>, TError,{data: BodyType<PushDeviceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unregisterPushDevice>>,
+        TError,
+        {data: BodyType<PushDeviceInput>},
+        TContext
+      > => {
+      return useMutation(getUnregisterPushDeviceMutationOptions(options));
     }
 
 export const getAdminLoginUrl = () => {

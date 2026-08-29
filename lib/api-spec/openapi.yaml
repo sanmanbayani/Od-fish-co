@@ -16,6 +16,7 @@ tags:
   - name: admin
   - name: rider
   - name: public
+  - name: notifications
 
 paths:
   /healthz:
@@ -547,6 +548,45 @@ paths:
                 $ref: "#/components/schemas/Cart"
 
   # ---------------------------------------------------------------- ADMIN AUTH
+  # ------------------------------------------------------------ NOTIFICATIONS
+  /notifications/devices:
+    post:
+      operationId: registerPushDevice
+      tags: [notifications]
+      summary: Register this phone to receive order updates
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushDeviceInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResult"
+
+  /notifications/devices/unregister:
+    post:
+      operationId: unregisterPushDevice
+      tags: [notifications]
+      summary: Stop sending order updates to this phone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushDeviceInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResult"
+
   /admin/login:
     post:
       operationId: adminLogin
@@ -1227,6 +1267,21 @@ components:
       required: [ok]
       properties:
         ok: { type: boolean }
+
+    PushDeviceInput:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          minLength: 10
+          maxLength: 255
+          description: >-
+            The Expo push token this install was issued, e.g.
+            `ExponentPushToken[xxxxxxxx]`.
+        platform:
+          type: string
+          enum: [ios, android]
 
     VariantDeleteResult:
       type: object

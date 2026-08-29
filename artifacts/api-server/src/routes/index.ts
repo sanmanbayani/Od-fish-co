@@ -5,6 +5,7 @@ import authRouter from "./auth";
 import cartRouter from "./cart";
 import catalogueRouter from "./catalogue";
 import healthRouter from "./health";
+import notificationsRouter from "./notifications";
 import ordersRouter from "./orders";
 import publicRouter from "./public";
 import riderRouter from "./rider";
@@ -21,6 +22,7 @@ router.use(catalogueRouter);
 // middleware only ever runs for its own paths.
 router.use("/addresses", addressesRouter);
 router.use("/cart", cartRouter);
+router.use("/notifications", notificationsRouter);
 router.use("/orders", ordersRouter);
 router.use("/admin", adminRouter);
 router.use("/rider", riderRouter);

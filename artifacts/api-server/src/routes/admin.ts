@@ -31,6 +31,7 @@ import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-o
 import { Router, type IRouter } from "express";
 import { loadProducts, serializeVariant } from "../lib/catalogue";
 import { badRequest, conflict, notFound, parseBody, unauthorized } from "../lib/http";
+import { notifyOrderStatus } from "../lib/push";
 import {
   canTransition,
   loadOrderBundles,
@@ -505,6 +506,11 @@ router.post("/orders/:id/status", requireOps, async (req, res) => {
 
     return changed;
   });
+
+  // Confirmed, packed, out for delivery, delivered: each one is news the
+  // customer would otherwise have to open the app to find. Cancellations and
+  // failures are deliberately left to the phone call that accompanies them.
+  notifyOrderStatus(updated);
 
   const [serialized] = await bundleWithCustomers([updated]);
   res.json(serialized);
