@@ -348,6 +348,9 @@ export const orders = pgTable(
     index("orders_status_idx").on(table.status),
     index("orders_rider_idx").on(table.riderId),
     index("orders_created_idx").on(table.createdAt),
+    // Checkout counts a slot's bookings while holding a lock on that slot row,
+    // so this count sits directly in the path of every order placed.
+    index("orders_slot_date_idx").on(table.slotId, table.deliveryDate),
   ],
 );
 

@@ -9,7 +9,8 @@ import {
   Settings, 
   MapPin, 
   LogOut,
-  Fish
+  Fish,
+  Clock3
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ const navItems: NavItem[] = [
   { title: "Inventory", href: "/admin/inventory", icon: Package },
   { title: "Staff", href: "/admin/staff", icon: Users },
   { title: "Service Areas", href: "/admin/service-areas", icon: MapPin },
+  { title: "Delivery Slots", href: "/admin/slots", icon: Clock3 },
   { title: "Settings", href: "/admin/settings", icon: Settings },
 ];
 

@@ -13,6 +13,12 @@ import { RiderLayout } from '@/components/layouts/RiderLayout';
 
 // Public Pages
 import Storefront from '@/pages/public/Storefront';
+import Terms from '@/pages/public/Terms';
+import Privacy from '@/pages/public/Privacy';
+import Refunds from '@/pages/public/Refunds';
+import Shipping from '@/pages/public/Shipping';
+import Faq from '@/pages/public/Faq';
+import Contact from '@/pages/public/Contact';
 
 // Admin Pages
 import AdminLogin from '@/pages/admin/AdminLogin';
@@ -23,6 +29,7 @@ import AdminProducts from '@/pages/admin/AdminProducts';
 import AdminInventory from '@/pages/admin/AdminInventory';
 import AdminStaff from '@/pages/admin/AdminStaff';
 import AdminServiceAreas from '@/pages/admin/AdminServiceAreas';
+import AdminSlots from '@/pages/admin/AdminSlots';
 import AdminSettings from '@/pages/admin/AdminSettings';
 
 // Rider Pages
@@ -46,6 +53,24 @@ function Router() {
         {/* PUBLIC ROUTES */}
         <Route path="/">
           <PublicLayout><Storefront /></PublicLayout>
+        </Route>
+        <Route path="/terms">
+          <PublicLayout><Terms /></PublicLayout>
+        </Route>
+        <Route path="/privacy">
+          <PublicLayout><Privacy /></PublicLayout>
+        </Route>
+        <Route path="/refunds">
+          <PublicLayout><Refunds /></PublicLayout>
+        </Route>
+        <Route path="/shipping">
+          <PublicLayout><Shipping /></PublicLayout>
+        </Route>
+        <Route path="/faq">
+          <PublicLayout><Faq /></PublicLayout>
+        </Route>
+        <Route path="/contact">
+          <PublicLayout><Contact /></PublicLayout>
         </Route>
 
         {/* ADMIN ROUTES */}
@@ -73,6 +98,9 @@ function Router() {
         </Route>
         <Route path="/admin/service-areas">
           <AdminGuard><AdminLayout><AdminServiceAreas /></AdminLayout></AdminGuard>
+        </Route>
+        <Route path="/admin/slots">
+          <AdminGuard><AdminLayout><AdminSlots /></AdminLayout></AdminGuard>
         </Route>
         <Route path="/admin/settings">
           <AdminGuard><AdminLayout><AdminSettings /></AdminLayout></AdminGuard>

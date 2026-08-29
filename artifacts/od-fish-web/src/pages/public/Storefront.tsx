@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useGetPublicSummary, useCheckServiceability, getCheckServiceabilityQueryKey, useJoinWaitlist } from "@workspace/api-client-react";
 import { formatPaise, formatWeightRange } from "@/lib/format";
+import { mediaUrl } from "@/lib/api-config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Fish, MapPin, Clock, ArrowRight, ShieldCheck, CheckCircle2 } from "lucide-react";
@@ -199,7 +200,7 @@ export default function Storefront() {
                   <div className="aspect-[4/3] overflow-hidden bg-muted relative">
                     {product.imageUrls?.[0] ? (
                       <img 
-                        src={product.imageUrls[0]} 
+                        src={mediaUrl(product.imageUrls[0])} 
                         alt={product.name} 
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                       />

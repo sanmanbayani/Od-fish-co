@@ -111,6 +111,29 @@ package.
   environments (`development`, `test`); anything else — including an unset `NODE_ENV` —
   counts as public. Never reintroduce a `NODE_ENV !== "production"` check; it fails open
   on the first deploy that forgets the variable.
+- **CORS and cookie SameSite move together.** `cors({ origin: true, credentials: true })`
+  is confined to local development. Any other environment uses the `WEB_ORIGINS`
+  allow-list, because reflecting an arbitrary origin while allowing credentials lets any
+  website act as a signed-in admin. Relaxing cookies to `SameSite=None` for a
+  cross-domain frontend removes the browser's own protection against that, so
+  `CROSS_SITE_COOKIES=true` refuses to boot without `WEB_ORIGINS`. Do not loosen one
+  without the other.
+- **CORS is not the CSRF defence; `requireTrustedOrigin` is.** CORS decides who may *read* a
+  reply, not who may *send* a request — a cross-site form post needs no preflight. Once
+  cookies go `SameSite=None` that gap is real, so unsafe requests carrying a session cookie
+  must have a trusted `Origin`. Login routes are checked too even though they arrive without
+  a cookie: otherwise a hostile page can log a victim into an attacker's account. Requests
+  with no `Origin` at all are non-browser callers (Expo, curl) and stay allowed, which is
+  what keeps the mobile app working.
+- **Host both surfaces under one registrable domain.** `odfishco.in` +
+  `api.odfishco.in`, not `*.vercel.app` + `*.railway.app`. Different registrable domains make
+  the session cookie a third-party cookie, which Safari blocks by default — correct CORS and
+  `SameSite=None` still produce intermittent, browser-specific logouts.
+- **The web app assumes a same-origin API unless told otherwise.** Requests are
+  root-relative `/api/...` and rely on the browser attaching the cookie. Deploying the
+  site apart from the API needs `VITE_API_BASE_URL` on the web build — that single switch
+  sets the client base URL, flips `fetch` to `credentials: "include"`, and prefixes
+  server-supplied `/api/media/...` image paths via `mediaUrl()`.
 - **The handover OTP is customer-only.** It is deliberately absent from every staff-facing
   serializer and compared server-side at the door. Do not add it to an admin or rider
   payload "for convenience".

@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Clock, MapPin, Phone, User, Package, FileText, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { mediaUrl } from "@/lib/api-config";
 
 export default function AdminOrderDetails() {
   const { id } = useParams<{ id: string }>();
@@ -103,7 +104,7 @@ export default function AdminOrderDetails() {
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           {item.imageUrl ? (
-                            <img src={item.imageUrl} alt={item.productName} className="w-12 h-12 rounded object-cover" />
+                            <img src={mediaUrl(item.imageUrl)} alt={item.productName} className="w-12 h-12 rounded object-cover" />
                           ) : (
                             <div className="w-12 h-12 rounded bg-muted flex items-center justify-center">
                               <Package className="w-6 h-6 text-muted-foreground/30" />

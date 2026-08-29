@@ -785,6 +785,50 @@ export interface PincodeInput {
   codEnabled?: boolean;
 }
 
+export interface AdminDeliverySlot {
+  id: string;
+  label: string;
+  startTime: string;
+  endTime: string;
+  cutoffTime: string;
+  capacity: number;
+  isOpen: boolean;
+  sortOrder: number;
+  ordersToday: number;
+}
+
+export interface AdminDeliverySlotInput {
+  /** @minLength 1 */
+  label: string;
+  /** @pattern ^([01][0-9]|2[0-3]):[0-5][0-9]$ */
+  startTime: string;
+  /** @pattern ^([01][0-9]|2[0-3]):[0-5][0-9]$ */
+  endTime: string;
+  /** @pattern ^([01][0-9]|2[0-3]):[0-5][0-9]$ */
+  cutoffTime: string;
+  /** @minimum 1 */
+  capacity: number;
+  isOpen?: boolean;
+}
+
+export interface AdminDeliverySlotUpdate {
+  /** @minLength 1 */
+  label?: string;
+  /** @pattern ^([01][0-9]|2[0-3]):[0-5][0-9]$ */
+  startTime?: string;
+  /** @pattern ^([01][0-9]|2[0-3]):[0-5][0-9]$ */
+  endTime?: string;
+  /** @pattern ^([01][0-9]|2[0-3]):[0-5][0-9]$ */
+  cutoffTime?: string;
+  /** @minimum 1 */
+  capacity?: number;
+  isOpen?: boolean;
+}
+
+export interface AdminDeliverySlotOpenInput {
+  isOpen: boolean;
+}
+
 export interface RiderOrder {
   id: string;
   orderNumber: string;

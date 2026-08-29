@@ -24,6 +24,10 @@ import type {
   AddressInput,
   AddressUpdate,
   AdminDashboard,
+  AdminDeliverySlot,
+  AdminDeliverySlotInput,
+  AdminDeliverySlotOpenInput,
+  AdminDeliverySlotUpdate,
   AdminOrder,
   CancellationInput,
   Cart,
@@ -3854,6 +3858,274 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getDeletePincodeMutationOptions(options));
+    }
+
+export const getListAdminSlotsUrl = () => {
+
+
+
+
+  return `/api/admin/slots`
+}
+
+export const listAdminSlots = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminDeliverySlot[]> => {
+
+  return customFetch<AdminDeliverySlot[]>(getListAdminSlotsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminSlotsQueryKey = () => {
+    return [
+    `/api/admin/slots`
+    ] as const;
+    }
+
+
+export const getListAdminSlotsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminSlots>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminSlots>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminSlotsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminSlots>>> = ({ signal }) => listAdminSlots({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminSlots>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminSlotsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminSlots>>>
+export type ListAdminSlotsQueryError = ErrorType<unknown>
+
+
+
+export function useListAdminSlots<TData = Awaited<ReturnType<typeof listAdminSlots>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminSlots>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminSlotsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAdminSlotUrl = () => {
+
+
+
+
+  return `/api/admin/slots`
+}
+
+export const createAdminSlot = async (adminDeliverySlotInput: AdminDeliverySlotInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminDeliverySlot> => {
+
+  return customFetch<AdminDeliverySlot>(getCreateAdminSlotUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminDeliverySlotInput)
+  }
+);}
+
+
+
+
+
+export const getCreateAdminSlotMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminSlot>>, TError,{data: BodyType<AdminDeliverySlotInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAdminSlot>>, TError,{data: BodyType<AdminDeliverySlotInput>}, TContext> => {
+
+const mutationKey = ['createAdminSlot'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminSlot>>, {data: BodyType<AdminDeliverySlotInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAdminSlot(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAdminSlotMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminSlot>>>
+    export type CreateAdminSlotMutationBody = BodyType<AdminDeliverySlotInput>
+    export type CreateAdminSlotMutationError = ErrorType<unknown>
+
+    export const useCreateAdminSlot = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminSlot>>, TError,{data: BodyType<AdminDeliverySlotInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAdminSlot>>,
+        TError,
+        {data: BodyType<AdminDeliverySlotInput>},
+        TContext
+      > => {
+      return useMutation(getCreateAdminSlotMutationOptions(options));
+    }
+
+export const getUpdateAdminSlotUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/slots/${id}`
+}
+
+export const updateAdminSlot = async (id: string,
+    adminDeliverySlotUpdate: AdminDeliverySlotUpdate, options?: Parameters<typeof customFetch>[1]): Promise<AdminDeliverySlot> => {
+
+  return customFetch<AdminDeliverySlot>(getUpdateAdminSlotUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminDeliverySlotUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateAdminSlotMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminSlot>>, TError,{id: string;data: BodyType<AdminDeliverySlotUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminSlot>>, TError,{id: string;data: BodyType<AdminDeliverySlotUpdate>}, TContext> => {
+
+const mutationKey = ['updateAdminSlot'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminSlot>>, {id: string;data: BodyType<AdminDeliverySlotUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateAdminSlot(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminSlotMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminSlot>>>
+    export type UpdateAdminSlotMutationBody = BodyType<AdminDeliverySlotUpdate>
+    export type UpdateAdminSlotMutationError = ErrorType<unknown>
+
+    export const useUpdateAdminSlot = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminSlot>>, TError,{id: string;data: BodyType<AdminDeliverySlotUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminSlot>>,
+        TError,
+        {id: string;data: BodyType<AdminDeliverySlotUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateAdminSlotMutationOptions(options));
+    }
+
+export const getSetAdminSlotOpenUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/slots/${id}/open`
+}
+
+export const setAdminSlotOpen = async (id: string,
+    adminDeliverySlotOpenInput: AdminDeliverySlotOpenInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminDeliverySlot> => {
+
+  return customFetch<AdminDeliverySlot>(getSetAdminSlotOpenUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminDeliverySlotOpenInput)
+  }
+);}
+
+
+
+
+
+export const getSetAdminSlotOpenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setAdminSlotOpen>>, TError,{id: string;data: BodyType<AdminDeliverySlotOpenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setAdminSlotOpen>>, TError,{id: string;data: BodyType<AdminDeliverySlotOpenInput>}, TContext> => {
+
+const mutationKey = ['setAdminSlotOpen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setAdminSlotOpen>>, {id: string;data: BodyType<AdminDeliverySlotOpenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  setAdminSlotOpen(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetAdminSlotOpenMutationResult = NonNullable<Awaited<ReturnType<typeof setAdminSlotOpen>>>
+    export type SetAdminSlotOpenMutationBody = BodyType<AdminDeliverySlotOpenInput>
+    export type SetAdminSlotOpenMutationError = ErrorType<unknown>
+
+    export const useSetAdminSlotOpen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setAdminSlotOpen>>, TError,{id: string;data: BodyType<AdminDeliverySlotOpenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setAdminSlotOpen>>,
+        TError,
+        {id: string;data: BodyType<AdminDeliverySlotOpenInput>},
+        TContext
+      > => {
+      return useMutation(getSetAdminSlotOpenMutationOptions(options));
     }
 
 export const getListRiderOrdersUrl = () => {

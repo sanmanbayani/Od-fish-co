@@ -65,6 +65,47 @@ export const AUTH_MOCK_ENABLED = AUTH_MOCK_OTP !== null;
 export const PAYMENTS_MOCK_ENABLED =
   process.env.PAYMENTS_MOCK?.trim().toLowerCase() === "true";
 
+/**
+ * Browser origins allowed to call this API with credentials.
+ *
+ * Comma-separated, e.g. `https://odfishco.in,https://admin.odfishco.in`. Needed
+ * once the web app is served from a different domain than the API — a Vercel
+ * frontend in front of a separately hosted Express server.
+ *
+ * This is an allow-list rather than a reflect-any policy on purpose. Reflecting
+ * the caller's Origin while also allowing credentials means *any* website can
+ * issue authenticated requests as a signed-in admin and read the responses.
+ */
+function readWebOrigins(): string[] {
+  const raw = process.env.WEB_ORIGINS?.trim();
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((origin) => origin.trim().replace(/\/+$/, ""))
+    .filter(Boolean);
+}
+
+export const WEB_ORIGINS: string[] = readWebOrigins();
+
+/**
+ * Send session cookies on cross-site requests (`SameSite=None; Secure`).
+ *
+ * Only switch this on when the web app genuinely sits on another domain.
+ * `SameSite=Lax`, the default here, is itself a meaningful defence: it stops a
+ * third-party page from riding a logged-in admin's cookie. Giving that up
+ * without a strict origin allow-list would be a hole, so we refuse the
+ * combination outright below.
+ */
+export const CROSS_SITE_COOKIES =
+  process.env.CROSS_SITE_COOKIES?.trim().toLowerCase() === "true";
+
+if (CROSS_SITE_COOKIES && WEB_ORIGINS.length === 0) {
+  throw new Error(
+    "CROSS_SITE_COOKIES=true requires WEB_ORIGINS to list the allowed frontend origins. " +
+      "Relaxing SameSite without an origin allow-list would let any site make authenticated requests.",
+  );
+}
+
 /** One-time startup notice so a mock left switched on is visible in the logs. */
 export function describeMocks(): string[] {
   const notes: string[] = [];

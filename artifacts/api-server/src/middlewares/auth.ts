@@ -7,6 +7,7 @@ import {
 } from "@workspace/db";
 import { eq, lt } from "drizzle-orm";
 import type { NextFunction, Request, RequestHandler, Response } from "express";
+import { CROSS_SITE_COOKIES, IS_PUBLIC_ENV } from "../lib/env";
 import { forbidden, unauthorized } from "../lib/http";
 import { newSessionToken } from "../lib/security";
 
@@ -41,11 +42,23 @@ function readToken(req: Request, cookieName: string): string | null {
   return cookies?.[cookieName] ?? null;
 }
 
+/**
+ * Session cookie attributes.
+ *
+ * `secure` keys off IS_PUBLIC_ENV rather than a `NODE_ENV === "production"`
+ * test: an unset NODE_ENV would otherwise ship session cookies without the
+ * Secure flag, i.e. over plain HTTP, on exactly the deployment that forgot to
+ * set it.
+ *
+ * `SameSite=None` is only used when the frontend is on another domain, and
+ * env.ts refuses to start in that mode without an origin allow-list.
+ */
 function cookieOptions() {
   return {
     httpOnly: true,
-    sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    sameSite: CROSS_SITE_COOKIES ? ("none" as const) : ("lax" as const),
+    // SameSite=None is invalid without Secure; browsers drop such a cookie.
+    secure: CROSS_SITE_COOKIES || IS_PUBLIC_ENV,
     maxAge: SESSION_DAYS * 24 * 60 * 60 * 1000,
     path: "/",
   };

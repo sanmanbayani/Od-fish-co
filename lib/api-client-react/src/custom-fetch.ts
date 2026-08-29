@@ -17,6 +17,7 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+let _credentials: RequestCredentials | null = null;
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -42,6 +43,22 @@ export function setBaseUrl(url: string | null): void {
  */
 export function setAuthTokenGetter(getter: AuthTokenGetter | null): void {
   _authTokenGetter = getter;
+}
+
+/**
+ * Set the `credentials` mode used for every request.
+ *
+ * `fetch` defaults to `same-origin`, which silently drops cookies once the API
+ * is served from a different domain than the app — the request goes out
+ * unauthenticated and the failure looks like an expired session rather than a
+ * configuration problem. A web app talking to a cross-origin API needs
+ * `"include"`.
+ *
+ * Pass `null` to restore the platform default. An explicit `credentials` on an
+ * individual call still wins.
+ */
+export function setCredentials(mode: RequestCredentials | null): void {
+  _credentials = mode;
 }
 
 function isRequest(input: RequestInfo | URL): input is Request {
@@ -360,7 +377,12 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  const response = await fetch(input, {
+    ...(_credentials ? { credentials: _credentials } : {}),
+    ...init,
+    method,
+    headers,
+  });
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);

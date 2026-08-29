@@ -1,11 +1,14 @@
 import {
   AdminLoginBody,
   AssignRiderBody,
+  CreateAdminSlotBody,
   CreatePincodeBody,
   CreateProductBody,
   CreateStaffBody,
   CreateVariantBody,
+  SetAdminSlotOpenBody,
   UpdateAdminOrderStatusBody,
+  UpdateAdminSlotBody,
   UpdateInventoryBody,
   UpdateProductBody,
   UpdateSettingsBody,
@@ -703,6 +706,121 @@ router.patch("/staff/:id", requireAdmin, async (req, res) => {
 
   if (!updated) throw notFound("That staff account does not exist.");
   res.json(serializeStaff(updated));
+});
+
+/* ---------------------------------- slots --------------------------------- */
+
+/**
+ * A delivery window has to run forwards.
+ *
+ * Cutoff is deliberately *not* constrained against the window: an early slot
+ * legitimately closes the previous evening — the 7 AM slot cuts off at 23:00 —
+ * so a cutoff later than the start time is normal here, not a typo.
+ */
+function assertSlotWindow(startTime: string, endTime: string) {
+  if (startTime >= endTime) {
+    throw badRequest("A delivery slot has to end after it starts.", "invalid_slot_window");
+  }
+}
+
+async function serializeAdminSlot(row: typeof deliverySlots.$inferSelect) {
+  const today = istDateString();
+  const [load] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(orders)
+    .where(
+      and(
+        eq(orders.slotId, row.id),
+        eq(orders.deliveryDate, today),
+        sql`${orders.status} <> 'CANCELLED'`,
+      ),
+    );
+  return {
+    id: row.id,
+    label: row.label,
+    startTime: row.startTime,
+    endTime: row.endTime,
+    cutoffTime: row.cutoffTime,
+    capacity: row.capacity,
+    isOpen: row.isActive,
+    sortOrder: row.sortOrder,
+    ordersToday: load?.count ?? 0,
+  };
+}
+
+router.get("/slots", requireOps, async (_req, res) => {
+  const rows = await db.select().from(deliverySlots).orderBy(asc(deliverySlots.sortOrder));
+  res.json(await Promise.all(rows.map(serializeAdminSlot)));
+});
+
+router.post("/slots", requireAdmin, async (req, res) => {
+  const body = parseBody(CreateAdminSlotBody, req.body);
+  assertSlotWindow(body.startTime, body.endTime);
+  const [last] = await db
+    .select({ sortOrder: deliverySlots.sortOrder })
+    .from(deliverySlots)
+    .orderBy(desc(deliverySlots.sortOrder))
+    .limit(1);
+  const [created] = await db
+    .insert(deliverySlots)
+    .values({
+      label: body.label,
+      startTime: body.startTime,
+      endTime: body.endTime,
+      cutoffTime: body.cutoffTime,
+      capacity: body.capacity,
+      isActive: body.isOpen ?? true,
+      sortOrder: (last?.sortOrder ?? 0) + 1,
+    })
+    .returning();
+  res.status(201).json(await serializeAdminSlot(created!));
+});
+
+router.patch("/slots/:id", requireAdmin, async (req, res) => {
+  const body = parseBody(UpdateAdminSlotBody, req.body);
+
+  // Validate the window the slot will *end up* with, not just the fields in
+  // this request — moving only the start time can still invert an otherwise
+  // valid window. Read and write under one lock so two partial edits (one
+  // raising the start, one lowering the end) cannot each validate against the
+  // old row and then commit a combined window that runs backwards.
+  const updated = await db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select()
+      .from(deliverySlots)
+      .where(eq(deliverySlots.id, String(req.params.id)))
+      .for("update")
+      .limit(1);
+    if (!existing) throw notFound("That delivery slot does not exist.");
+    assertSlotWindow(body.startTime ?? existing.startTime, body.endTime ?? existing.endTime);
+
+    const [row] = await tx
+      .update(deliverySlots)
+      .set({
+        ...(body.label === undefined ? {} : { label: body.label }),
+        ...(body.startTime === undefined ? {} : { startTime: body.startTime }),
+        ...(body.endTime === undefined ? {} : { endTime: body.endTime }),
+        ...(body.cutoffTime === undefined ? {} : { cutoffTime: body.cutoffTime }),
+        ...(body.capacity === undefined ? {} : { capacity: body.capacity }),
+        ...(body.isOpen === undefined ? {} : { isActive: body.isOpen }),
+      })
+      .where(eq(deliverySlots.id, String(req.params.id)))
+      .returning();
+    return row;
+  });
+  if (!updated) throw notFound("That delivery slot does not exist.");
+  res.json(await serializeAdminSlot(updated));
+});
+
+router.post("/slots/:id/open", requireAdmin, async (req, res) => {
+  const body = parseBody(SetAdminSlotOpenBody, req.body);
+  const [updated] = await db
+    .update(deliverySlots)
+    .set({ isActive: body.isOpen })
+    .where(eq(deliverySlots.id, String(req.params.id)))
+    .returning();
+  if (!updated) throw notFound("That delivery slot does not exist.");
+  res.json(await serializeAdminSlot(updated));
 });
 
 /* -------------------------------- settings -------------------------------- */

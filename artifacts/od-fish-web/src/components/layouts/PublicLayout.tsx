@@ -38,18 +38,19 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             </p>
           </div>
           <div>
-            <h4 className="font-bold mb-4 text-sm uppercase tracking-wider text-background/50">Contact</h4>
+            <h4 className="font-bold mb-4 text-sm uppercase tracking-wider text-background/50">Information</h4>
             <ul className="space-y-2 text-sm text-background/80">
-              <li>Sassoon Dock, Mumbai</li>
-              <li>support@odfish.co</li>
+              <li><Link href="/shipping" className="hover:text-background transition-colors">Delivery Policy</Link></li>
+              <li><Link href="/faq" className="hover:text-background transition-colors">Frequently Asked Questions</Link></li>
+              <li><Link href="/contact" className="hover:text-background transition-colors">Contact Us</Link></li>
             </ul>
           </div>
           <div>
             <h4 className="font-bold mb-4 text-sm uppercase tracking-wider text-background/50">Legal</h4>
             <ul className="space-y-2 text-sm text-background/80">
-              <li>Terms of Service</li>
-              <li>Privacy Policy</li>
-              <li>Refunds & Cancellations</li>
+              <li><Link href="/terms" className="hover:text-background transition-colors">Terms of Service</Link></li>
+              <li><Link href="/privacy" className="hover:text-background transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/refunds" className="hover:text-background transition-colors">Refunds &amp; Cancellations</Link></li>
             </ul>
           </div>
         </div>

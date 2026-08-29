@@ -70,9 +70,27 @@ export interface SlotInstance {
 }
 
 /**
+ * The instant at which ordering closes for one slot on one delivery date.
+ *
+ * A cutoff later in the clock than the window's own start can only mean the
+ * evening before: nobody is still taking orders for a 7 AM delivery at 11 PM on
+ * the same morning. Fresh fish is bought at the dawn market, so closing the
+ * night before is the normal case here, not an edge case — which is why the
+ * cutoff is read relative to the window rather than constrained to sit inside
+ * it.
+ */
+function cutoffInstantFor(definition: SlotDefinition, deliveryDate: string): Date {
+  const closesPreviousEvening = definition.cutoffTime > definition.startTime;
+  return istInstant(
+    closesPreviousEvening ? addDays(deliveryDate, -1) : deliveryDate,
+    definition.cutoffTime,
+  );
+}
+
+/**
  * Expand slot definitions into the next few concrete, orderable instances.
- * A slot for today disappears once its order cutoff has passed; the same slot
- * reappears for tomorrow.
+ * A slot disappears once its order cutoff has passed; the same slot reappears
+ * for the next day it is still orderable for.
  */
 export function upcomingSlots(
   definitions: SlotDefinition[],
@@ -84,20 +102,18 @@ export function upcomingSlots(
   const days = options.days ?? 3;
   const limit = options.limit ?? 6;
   const today = istDateString(now);
-  const nowTime = istTimeString(now);
 
   const instances: SlotInstance[] = [];
 
   for (let dayOffset = 0; dayOffset < days; dayOffset += 1) {
     const deliveryDate = addDays(today, dayOffset);
     for (const definition of [...definitions].sort((a, b) => a.sortOrder - b.sortOrder)) {
-      if (dayOffset === 0 && nowTime >= definition.cutoffTime) continue;
+      // Compare real instants, not clock strings: a slot closing the previous
+      // evening cannot be judged against today's wall clock alone.
+      const cutoffAt = cutoffInstantFor(definition, deliveryDate);
+      if (cutoffAt.getTime() <= now.getTime()) continue;
 
-      const cutoffAt = istInstant(deliveryDate, definition.cutoffTime);
-      const secondsToCutoff = Math.max(
-        0,
-        Math.floor((cutoffAt.getTime() - now.getTime()) / 1000),
-      );
+      const secondsToCutoff = Math.floor((cutoffAt.getTime() - now.getTime()) / 1000);
 
       instances.push({
         id: definition.id,

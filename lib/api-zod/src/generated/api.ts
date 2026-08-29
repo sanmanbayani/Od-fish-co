@@ -1979,6 +1979,103 @@ export const DeletePincodeResponse = zod.object({
 })
 
 
+export const ListAdminSlotsResponseItem = zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "startTime": zod.string(),
+  "endTime": zod.string(),
+  "cutoffTime": zod.string(),
+  "capacity": zod.number().int(),
+  "isOpen": zod.boolean(),
+  "sortOrder": zod.number().int(),
+  "ordersToday": zod.number().int()
+})
+export const ListAdminSlotsResponse = zod.array(ListAdminSlotsResponseItem)
+
+
+
+export const createAdminSlotBodyStartTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const createAdminSlotBodyEndTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const createAdminSlotBodyCutoffTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+
+
+
+export const CreateAdminSlotBody = zod.object({
+  "label": zod.string().min(1),
+  "startTime": zod.string().regex(createAdminSlotBodyStartTimeRegExp),
+  "endTime": zod.string().regex(createAdminSlotBodyEndTimeRegExp),
+  "cutoffTime": zod.string().regex(createAdminSlotBodyCutoffTimeRegExp),
+  "capacity": zod.number().int().min(1),
+  "isOpen": zod.boolean().optional()
+})
+
+export const CreateAdminSlotResponse = zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "startTime": zod.string(),
+  "endTime": zod.string(),
+  "cutoffTime": zod.string(),
+  "capacity": zod.number().int(),
+  "isOpen": zod.boolean(),
+  "sortOrder": zod.number().int(),
+  "ordersToday": zod.number().int()
+})
+
+
+export const UpdateAdminSlotParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+export const updateAdminSlotBodyStartTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const updateAdminSlotBodyEndTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const updateAdminSlotBodyCutoffTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+
+
+
+export const UpdateAdminSlotBody = zod.object({
+  "label": zod.string().min(1).optional(),
+  "startTime": zod.string().regex(updateAdminSlotBodyStartTimeRegExp).optional(),
+  "endTime": zod.string().regex(updateAdminSlotBodyEndTimeRegExp).optional(),
+  "cutoffTime": zod.string().regex(updateAdminSlotBodyCutoffTimeRegExp).optional(),
+  "capacity": zod.number().int().min(1).optional(),
+  "isOpen": zod.boolean().optional()
+})
+
+export const UpdateAdminSlotResponse = zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "startTime": zod.string(),
+  "endTime": zod.string(),
+  "cutoffTime": zod.string(),
+  "capacity": zod.number().int(),
+  "isOpen": zod.boolean(),
+  "sortOrder": zod.number().int(),
+  "ordersToday": zod.number().int()
+})
+
+
+export const SetAdminSlotOpenParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const SetAdminSlotOpenBody = zod.object({
+  "isOpen": zod.boolean()
+})
+
+export const SetAdminSlotOpenResponse = zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "startTime": zod.string(),
+  "endTime": zod.string(),
+  "cutoffTime": zod.string(),
+  "capacity": zod.number().int(),
+  "isOpen": zod.boolean(),
+  "sortOrder": zod.number().int(),
+  "ordersToday": zod.number().int()
+})
+
+
 /**
  * @summary Orders assigned to the signed-in rider
  */

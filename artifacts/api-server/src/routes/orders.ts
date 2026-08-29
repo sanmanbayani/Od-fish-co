@@ -148,6 +148,43 @@ router.post("/", async (req, res) => {
       );
     }
 
+    // Slot capacity is a real operational limit, not a display figure: there
+    // are only so many fish the counter can cut, pack and dispatch in one
+    // window. Lock the slot row so two checkouts racing for its last place
+    // serialise here instead of both reading the same free space and both
+    // being accepted.
+    const [lockedSlot] = await tx
+      .select({ capacity: deliverySlots.capacity })
+      .from(deliverySlots)
+      .where(eq(deliverySlots.id, slot.id))
+      .for("update");
+
+    if (!lockedSlot) {
+      throw conflict("That delivery slot just closed. Please pick another one.", "slot_closed");
+    }
+
+    const [booked] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.slotId, slot.id),
+          eq(orders.deliveryDate, slot.deliveryDate),
+          // A cancelled or failed order has already given its stock back, so it
+          // must give its place in the van back too — otherwise an abandoned
+          // card payment silently costs the slot a delivery for the rest of the
+          // day.
+          sql`${orders.status} NOT IN ('CANCELLED', 'FAILED')`,
+        ),
+      );
+
+    if ((booked?.count ?? 0) >= lockedSlot.capacity) {
+      throw conflict(
+        "That delivery slot is fully booked. Please pick another one.",
+        "slot_full",
+      );
+    }
+
     // Take the stock next: if two people race for the last pack, the loser
     // finds out here rather than at the door.
     for (const item of cart.items) {
