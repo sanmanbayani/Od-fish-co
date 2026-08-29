@@ -13,6 +13,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { Feather } from '@expo/vector-icons';
 import {
   Fraunces_600SemiBold,
   Fraunces_700Bold,
@@ -94,6 +95,12 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
+    // Every screen draws Feather icons. @expo/vector-icons loads its own font
+    // asynchronously, which on a real device is not guaranteed to finish before
+    // the first paint — the icons then render as blank or partial glyphs. The
+    // text fonts below are already gated here, so folding the icon font into the
+    // same gate costs nothing and removes the race.
+    ...Feather.font,
     Fraunces_600SemiBold,
     Fraunces_700Bold,
     PlusJakartaSans_400Regular,
