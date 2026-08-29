@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "OD Fish Co. Web"
+description = "The public landing page and internal operations console for OD Fish Co., a Mumbai direct-to-consumer fresh seafood delivery business. Serves three surfaces from one app: a marketing landing page for customers, an admin dashboard for managing catalogue, inventory, orders and riders, and a mobile-first rider view for confirming deliveries with an OTP."
+version = "1.0.0"
+id = "artifacts/od-fish-web"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24645
+
+[services.development]
+run = "pnpm --filter @workspace/od-fish-web run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/od-fish-web", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/od-fish-web/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24645"
+BASE_PATH = "/"

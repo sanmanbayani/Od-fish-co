@@ -15,7 +15,12 @@ async function buildAll() {
   await rm(distDir, { recursive: true, force: true });
 
   await esbuild({
-    entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+    entryPoints: [
+      path.resolve(artifactDir, "src/index.ts"),
+      // Bundled the same way as the server so the seed script resolves
+      // workspace packages identically.
+      path.resolve(artifactDir, "src/seed.ts"),
+    ],
     platform: "node",
     bundle: true,
     format: "esm",

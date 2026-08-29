@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "vAL7grkgxfcGp-4zKgTSL"
+uri = "file://OD_Fish_Co_Build_Prompt.md"
+type = "text"
+title = "OD Fish Co. — Master Build Prompt"
+description = "Phased build prompt for the OD Fish Co. seafood app: context block, full Postgres schema with RLS, and 8 phases (foundations, phone auth, catalogue, Razorpay checkout, delivery OTP, admin dashboard, landing page, ship) each with its own verification checkpoint."
+logical_id = "7e880d27-d21f-4aeb-b342-aae04a42165f"
+content_hash = "sha256:14f7d6bb7041c3f521e62faa5f8522ca90fd2feff59ca2f8cba59db689929a58"
+size = 49963
+mtime_ms = 1787984458143
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/conversation:992420fe-8fd4-4a0f-b57f-dcce3e7f487b/7e880d27-d21f-4aeb-b342-aae04a42165f/428e431d-5ce2-4ebb-a64f-ed4eb0f7ed07"
+storage_version_token = "1787984473077571"
+content_type = "text/markdown"

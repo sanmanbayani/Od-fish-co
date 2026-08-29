@@ -3,20 +3,26 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: OD Fish Co. API - consumer storefront, admin operations console, and rider delivery app.
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: auth
+  - name: catalogue
+  - name: cart
+  - name: orders
+  - name: admin
+  - name: rider
+  - name: public
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +30,1059 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ---------------------------------------------------------------- PUBLIC
+  /public/summary:
+    get:
+      operationId: getPublicSummary
+      tags: [public]
+      summary: Landing page content
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicSummary"
+
+  /serviceability/{pincode}:
+    get:
+      operationId: checkServiceability
+      tags: [public]
+      summary: Check whether a pincode is serviceable
+      parameters:
+        - name: pincode
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Serviceability"
+
+  /waitlist:
+    post:
+      operationId: joinWaitlist
+      tags: [public]
+      summary: Capture an out-of-area customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WaitlistEntryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResult"
+
+  # ---------------------------------------------------------------- AUTH
+  /auth/otp/request:
+    post:
+      operationId: requestOtp
+      tags: [auth]
+      summary: Send a login OTP to an Indian mobile number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OtpRequestInput"
+      responses:
+        "200":
+          description: OTP issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OtpChallenge"
+        "429":
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
+
+  /auth/otp/verify:
+    post:
+      operationId: verifyOtp
+      tags: [auth]
+      summary: Exchange an OTP for a session token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OtpVerifyInput"
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerSession"
+        "400":
+          description: Invalid or expired OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
+
+  /auth/me:
+    get:
+      operationId: getCurrentCustomer
+      tags: [auth]
+      summary: Current signed-in customer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
+    patch:
+      operationId: updateCurrentCustomer
+      tags: [auth]
+      summary: Update the customer profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+
+  /auth/logout:
+    post:
+      operationId: logoutCustomer
+      tags: [auth]
+      summary: Clear the customer session
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResult"
+
+  # ---------------------------------------------------------------- ADDRESSES
+  /addresses:
+    get:
+      operationId: listAddresses
+      tags: [auth]
+      summary: List the customer's saved addresses
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Address"
+    post:
+      operationId: createAddress
+      tags: [auth]
+      summary: Save a new delivery address
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddressInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Address"
+
+  /addresses/{id}:
+    patch:
+      operationId: updateAddress
+      tags: [auth]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddressUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Address"
+    delete:
+      operationId: deleteAddress
+      tags: [auth]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResult"
+
+  # ---------------------------------------------------------------- CATALOGUE
+  /home:
+    get:
+      operationId: getHomeFeed
+      tags: [catalogue]
+      summary: Storefront home feed - delivery promise, categories, curated rails
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeFeed"
+
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [catalogue]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+
+  /products:
+    get:
+      operationId: listProducts
+      tags: [catalogue]
+      summary: Browse or search the catalogue (searches English and local fish names)
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema: { type: string }
+        - name: search
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+  /products/{slug}:
+    get:
+      operationId: getProduct
+      tags: [catalogue]
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
+
+  /delivery-slots:
+    get:
+      operationId: listDeliverySlots
+      tags: [catalogue]
+      summary: Bookable delivery slots with live cutoff state
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DeliverySlot"
+
+  # ---------------------------------------------------------------- CART
+  /cart:
+    get:
+      operationId: getCart
+      tags: [cart]
+      summary: Current cart with a server-computed bill and stock reconciliation notices
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+
+  /cart/items:
+    post:
+      operationId: addCartItem
+      tags: [cart]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CartItemInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+
+  /cart/items/{variantId}:
+    patch:
+      operationId: updateCartItem
+      tags: [cart]
+      parameters:
+        - name: variantId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CartItemUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+    delete:
+      operationId: removeCartItem
+      tags: [cart]
+      parameters:
+        - name: variantId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+
+  # ---------------------------------------------------------------- ORDERS
+  /orders:
+    get:
+      operationId: listOrders
+      tags: [orders]
+      summary: Customer order history
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+    post:
+      operationId: createOrder
+      tags: [orders]
+      summary: Place an order - all totals are computed server-side from live prices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "409":
+          description: Stock or slot conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
+
+  /orders/{id}:
+    get:
+      operationId: getOrder
+      tags: [orders]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
+
+  /orders/{id}/pay:
+    post:
+      operationId: payOrder
+      tags: [orders]
+      summary: Settle a prepaid order (simulated gateway callback)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentResultInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /orders/{id}/cancel:
+    post:
+      operationId: cancelOrder
+      tags: [orders]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancellationInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "409":
+          description: Too late to cancel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
+
+  /orders/{id}/reorder:
+    post:
+      operationId: reorder
+      tags: [orders]
+      summary: Rebuild the cart from a past order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+
+  # ---------------------------------------------------------------- ADMIN AUTH
+  /admin/login:
+    post:
+      operationId: adminLogin
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffCredentialsInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffSession"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
+
+  /admin/logout:
+    post:
+      operationId: logoutStaff
+      tags: [admin]
+      summary: Clear the staff session
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResult"
+
+  /admin/me:
+    get:
+      operationId: getCurrentStaff
+      tags: [admin]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Staff"
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
+
+  # ---------------------------------------------------------------- ADMIN DASHBOARD
+  /admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      tags: [admin]
+      summary: Today's operating picture - counts, revenue, action queue, low stock
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+
+  /admin/orders:
+    get:
+      operationId: listAdminOrders
+      tags: [admin]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { type: string }
+        - name: deliveryDate
+          in: query
+          required: false
+          schema: { type: string }
+        - name: slotId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: search
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminOrder"
+
+  /admin/orders/{id}:
+    get:
+      operationId: getAdminOrder
+      tags: [admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminOrder"
+
+  /admin/orders/{id}/status:
+    post:
+      operationId: updateAdminOrderStatus
+      tags: [admin]
+      summary: Move an order through the delivery state machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderStatusInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminOrder"
+        "409":
+          description: Illegal transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
+
+  /admin/orders/{id}/assign-rider:
+    post:
+      operationId: assignRider
+      tags: [admin]
+      summary: Assign a rider, dispatch the order and generate the delivery OTP
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RiderAssignmentInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminOrder"
+
+  # ---------------------------------------------------------------- ADMIN CATALOGUE
+  /admin/products:
+    get:
+      operationId: listAdminProducts
+      tags: [admin]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+    post:
+      operationId: createProduct
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  /admin/products/{id}:
+    patch:
+      operationId: updateProduct
+      tags: [admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    delete:
+      operationId: archiveProduct
+      tags: [admin]
+      summary: Soft-delete a product (never hard-deleted, it may appear in past orders)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResult"
+
+  /admin/products/{id}/variants:
+    post:
+      operationId: createVariant
+      tags: [admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VariantInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductVariant"
+
+  /admin/variants/{id}:
+    patch:
+      operationId: updateVariant
+      tags: [admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VariantUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductVariant"
+    delete:
+      operationId: archiveVariant
+      tags: [admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResult"
+
+  # ---------------------------------------------------------------- ADMIN INVENTORY
+  /admin/inventory:
+    get:
+      operationId: listInventory
+      tags: [admin]
+      summary: Every sellable variant, lowest stock first
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InventoryRow"
+    patch:
+      operationId: updateInventory
+      tags: [admin]
+      summary: Start-of-day bulk stock and price entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InventoryBulkInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InventoryRow"
+
+  # ---------------------------------------------------------------- ADMIN STAFF & SETTINGS
+  /admin/staff:
+    get:
+      operationId: listStaff
+      tags: [admin]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Staff"
+    post:
+      operationId: createStaff
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Staff"
+
+  /admin/staff/{id}:
+    patch:
+      operationId: updateStaff
+      tags: [admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Staff"
+
+  /admin/settings:
+    get:
+      operationId: getSettings
+      tags: [admin]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreSettings"
+    patch:
+      operationId: updateSettings
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoreSettingsUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreSettings"
+
+  /admin/pincodes:
+    get:
+      operationId: listPincodes
+      tags: [admin]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pincode"
+    post:
+      operationId: createPincode
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PincodeInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pincode"
+
+  /admin/pincodes/{pincode}:
+    delete:
+      operationId: deletePincode
+      tags: [admin]
+      parameters:
+        - name: pincode
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResult"
+
+  # ---------------------------------------------------------------- RIDER
+  /rider/orders:
+    get:
+      operationId: listRiderOrders
+      tags: [rider]
+      summary: Orders assigned to the signed-in rider
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RiderOrder"
+
+  /rider/orders/{id}/verify-otp:
+    post:
+      operationId: verifyDeliveryOtp
+      tags: [rider]
+      summary: Complete a delivery by verifying the customer's OTP
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryOtpInput"
+      responses:
+        "200":
+          description: Delivered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiderOrder"
+        "400":
+          description: Wrong OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
+        "423":
+          description: Locked after too many attempts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
+
+  /rider/orders/{id}/unreachable:
+    post:
+      operationId: reportUnreachable
+      tags: [rider]
+      summary: Flag a customer as unreachable - does not complete the order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiderOrder"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +1093,935 @@ components:
       required:
         - status
 
+    OkResult:
+      type: object
+      required: [ok]
+      properties:
+        ok: { type: boolean }
+
+    ErrorResult:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+        code: { type: string }
+
+    # ------------------------------------------------------------ AUTH
+    OtpRequestInput:
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          type: string
+          description: 10-digit Indian mobile number without the +91 prefix
+          minLength: 10
+          maxLength: 10
+
+    OtpChallenge:
+      type: object
+      required: [phone, expiresInSeconds, delivered]
+      properties:
+        phone: { type: string }
+        expiresInSeconds: { type: integer }
+        delivered: { type: boolean }
+        devOtp:
+          type: ["string", "null"]
+          description: Present only while no SMS provider is configured, so the flow is testable
+
+    OtpVerifyInput:
+      type: object
+      required: [phone, otp]
+      properties:
+        phone: { type: string }
+        otp: { type: string, minLength: 6, maxLength: 6 }
+
+    Customer:
+      type: object
+      required: [id, phone, isNew]
+      properties:
+        id: { type: string }
+        phone: { type: string }
+        fullName: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+        isNew: { type: boolean }
+        createdAt: { type: string }
+
+    CustomerSession:
+      type: object
+      required: [token, customer]
+      properties:
+        token: { type: string }
+        customer: { $ref: "#/components/schemas/Customer" }
+
+    CustomerUpdate:
+      type: object
+      properties:
+        fullName: { type: string, minLength: 1 }
+        email: { type: string }
+
+    # ------------------------------------------------------------ ADDRESS
+    Address:
+      type: object
+      required:
+        [
+          id,
+          label,
+          receiverName,
+          receiverPhone,
+          line1,
+          area,
+          city,
+          state,
+          pincode,
+          isDefault,
+          isServiceable,
+        ]
+      properties:
+        id: { type: string }
+        label: { type: string }
+        receiverName: { type: string }
+        receiverPhone: { type: string }
+        line1: { type: string }
+        line2: { type: ["string", "null"] }
+        area: { type: string }
+        city: { type: string }
+        state: { type: string }
+        pincode: { type: string }
+        isDefault: { type: boolean }
+        isServiceable: { type: boolean }
+
+    AddressInput:
+      type: object
+      required: [receiverName, receiverPhone, line1, area, pincode]
+      properties:
+        label: { type: string }
+        receiverName: { type: string, minLength: 1 }
+        receiverPhone: { type: string, minLength: 10, maxLength: 10 }
+        line1: { type: string, minLength: 1 }
+        line2: { type: string }
+        area: { type: string, minLength: 1 }
+        city: { type: string }
+        state: { type: string }
+        pincode: { type: string, minLength: 6, maxLength: 6 }
+        isDefault: { type: boolean }
+
+    AddressUpdate:
+      type: object
+      properties:
+        label: { type: string }
+        receiverName: { type: string, minLength: 1 }
+        receiverPhone: { type: string, minLength: 10, maxLength: 10 }
+        line1: { type: string, minLength: 1 }
+        line2: { type: string }
+        area: { type: string, minLength: 1 }
+        city: { type: string }
+        state: { type: string }
+        pincode: { type: string, minLength: 6, maxLength: 6 }
+        isDefault: { type: boolean }
+
+    Serviceability:
+      type: object
+      required: [pincode, serviceable, codEnabled]
+      properties:
+        pincode: { type: string }
+        serviceable: { type: boolean }
+        areaName: { type: ["string", "null"] }
+        codEnabled: { type: boolean }
+
+    WaitlistEntryInput:
+      type: object
+      required: [pincode, phone]
+      properties:
+        pincode: { type: string, minLength: 6, maxLength: 6 }
+        phone: { type: string, minLength: 10, maxLength: 10 }
+
+    # ------------------------------------------------------------ CATALOGUE
+    Category:
+      type: object
+      required: [id, slug, name, productCount]
+      properties:
+        id: { type: string }
+        slug: { type: string }
+        name: { type: string }
+        nameLocal: { type: ["string", "null"] }
+        imageUrl: { type: ["string", "null"] }
+        productCount: { type: integer }
+
+    ProductVariant:
+      type: object
+      required:
+        [
+          id,
+          productId,
+          sku,
+          cutType,
+          soldBy,
+          packLabel,
+          mrpPaise,
+          pricePaise,
+          stockQty,
+          lowStockAt,
+          isActive,
+        ]
+      properties:
+        id: { type: string }
+        productId: { type: string }
+        sku: { type: string }
+        cutType: { type: string }
+        soldBy: { type: string, enum: [PACK, PIECE] }
+        packLabel: { type: string }
+        grossWeightG: { type: ["integer", "null"] }
+        netWeightMinG: { type: ["integer", "null"] }
+        netWeightMaxG: { type: ["integer", "null"] }
+        pieceCount: { type: ["integer", "null"] }
+        mrpPaise: { type: integer }
+        pricePaise: { type: integer }
+        perKgPaise: { type: ["integer", "null"] }
+        discountPercent: { type: integer }
+        stockQty: { type: integer }
+        lowStockAt: { type: integer }
+        isActive: { type: boolean }
+
+    Product:
+      type: object
+      required:
+        [id, slug, name, categoryId, categoryName, imageUrls, variants, isActive, inStock]
+      properties:
+        id: { type: string }
+        slug: { type: string }
+        name: { type: string }
+        nameLocal: { type: ["string", "null"] }
+        shortDesc: { type: ["string", "null"] }
+        longDesc: { type: ["string", "null"] }
+        origin: { type: ["string", "null"] }
+        bestFor:
+          type: array
+          items: { type: string }
+        imageUrls:
+          type: array
+          items: { type: string }
+        categoryId: { type: string }
+        categorySlug: { type: string }
+        categoryName: { type: string }
+        isActive: { type: boolean }
+        inStock: { type: boolean }
+        fromPricePaise: { type: ["integer", "null"] }
+        variants:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductVariant"
+
+    ProductInput:
+      type: object
+      required: [name, categoryId]
+      properties:
+        name: { type: string, minLength: 1 }
+        nameLocal: { type: string }
+        categoryId: { type: string }
+        shortDesc: { type: string }
+        longDesc: { type: string }
+        origin: { type: string }
+        bestFor:
+          type: array
+          items: { type: string }
+        imageUrls:
+          type: array
+          items: { type: string }
+        isActive: { type: boolean }
+
+    ProductUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        nameLocal: { type: string }
+        categoryId: { type: string }
+        shortDesc: { type: string }
+        longDesc: { type: string }
+        origin: { type: string }
+        bestFor:
+          type: array
+          items: { type: string }
+        imageUrls:
+          type: array
+          items: { type: string }
+        isActive: { type: boolean }
+
+    VariantInput:
+      type: object
+      required: [cutType, packLabel, mrpPaise, pricePaise]
+      properties:
+        cutType: { type: string, minLength: 1 }
+        soldBy: { type: string, enum: [PACK, PIECE] }
+        packLabel: { type: string, minLength: 1 }
+        grossWeightG: { type: integer }
+        netWeightMinG: { type: integer }
+        netWeightMaxG: { type: integer }
+        pieceCount: { type: integer }
+        mrpPaise: { type: integer, minimum: 0 }
+        pricePaise: { type: integer, minimum: 0 }
+        stockQty: { type: integer, minimum: 0 }
+        lowStockAt: { type: integer, minimum: 0 }
+        isActive: { type: boolean }
+
+    VariantUpdate:
+      type: object
+      properties:
+        cutType: { type: string, minLength: 1 }
+        soldBy: { type: string, enum: [PACK, PIECE] }
+        packLabel: { type: string, minLength: 1 }
+        grossWeightG: { type: integer }
+        netWeightMinG: { type: integer }
+        netWeightMaxG: { type: integer }
+        pieceCount: { type: integer }
+        mrpPaise: { type: integer, minimum: 0 }
+        pricePaise: { type: integer, minimum: 0 }
+        stockQty: { type: integer, minimum: 0 }
+        lowStockAt: { type: integer, minimum: 0 }
+        isActive: { type: boolean }
+
+    DeliverySlot:
+      type: object
+      required: [id, label, startTime, endTime, cutoffTime, deliveryDate, isOpen]
+      properties:
+        id: { type: string }
+        label: { type: string }
+        startTime: { type: string }
+        endTime: { type: string }
+        cutoffTime: { type: string }
+        deliveryDate: { type: string }
+        isOpen: { type: boolean }
+        closedReason: { type: ["string", "null"] }
+        secondsToCutoff: { type: ["integer", "null"] }
+
+    HomeFeed:
+      type: object
+      required: [categories, todaysCatch, popular, storeOpen]
+      properties:
+        storeOpen: { type: boolean }
+        nextSlot:
+          oneOf:
+            - $ref: "#/components/schemas/DeliverySlot"
+            - type: "null"
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/Category"
+        todaysCatch:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        popular:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        freeDeliveryThresholdPaise: { type: integer }
+
+    # ------------------------------------------------------------ CART
+    CartItem:
+      type: object
+      required:
+        [
+          variantId,
+          productId,
+          productSlug,
+          productName,
+          cutType,
+          packLabel,
+          unitPricePaise,
+          mrpPaise,
+          quantity,
+          lineTotalPaise,
+          stockQty,
+        ]
+      properties:
+        variantId: { type: string }
+        productId: { type: string }
+        productSlug: { type: string }
+        productName: { type: string }
+        productNameLocal: { type: ["string", "null"] }
+        cutType: { type: string }
+        packLabel: { type: string }
+        imageUrl: { type: ["string", "null"] }
+        netWeightMinG: { type: ["integer", "null"] }
+        netWeightMaxG: { type: ["integer", "null"] }
+        unitPricePaise: { type: integer }
+        mrpPaise: { type: integer }
+        quantity: { type: integer }
+        lineTotalPaise: { type: integer }
+        stockQty: { type: integer }
+
+    CartBill:
+      type: object
+      required:
+        [
+          subtotalPaise,
+          deliveryFeePaise,
+          handlingFeePaise,
+          discountPaise,
+          totalPaise,
+          freeDeliveryThresholdPaise,
+          amountToFreeDeliveryPaise,
+          savingsPaise,
+        ]
+      properties:
+        subtotalPaise: { type: integer }
+        deliveryFeePaise: { type: integer }
+        handlingFeePaise: { type: integer }
+        discountPaise: { type: integer }
+        totalPaise: { type: integer }
+        freeDeliveryThresholdPaise: { type: integer }
+        amountToFreeDeliveryPaise: { type: integer }
+        savingsPaise: { type: integer }
+
+    Cart:
+      type: object
+      required: [items, bill, itemCount, notices, codAvailable]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CartItem"
+        bill:
+          $ref: "#/components/schemas/CartBill"
+        itemCount: { type: integer }
+        codAvailable: { type: boolean }
+        notices:
+          type: array
+          description: Stock reconciliation messages, e.g. a quantity that had to be clamped
+          items: { type: string }
+
+    CartItemInput:
+      type: object
+      required: [variantId, quantity]
+      properties:
+        variantId: { type: string }
+        quantity: { type: integer, minimum: 1, maximum: 20 }
+
+    CartItemUpdate:
+      type: object
+      required: [quantity]
+      properties:
+        quantity: { type: integer, minimum: 0, maximum: 20 }
+
+    # ------------------------------------------------------------ ORDERS
+    OrderItem:
+      type: object
+      required:
+        [
+          id,
+          productName,
+          cutType,
+          packLabel,
+          unitPricePaise,
+          quantity,
+          lineTotalPaise,
+        ]
+      properties:
+        id: { type: string }
+        variantId: { type: string }
+        productName: { type: string }
+        productNameLocal: { type: ["string", "null"] }
+        cutType: { type: string }
+        packLabel: { type: string }
+        imageUrl: { type: ["string", "null"] }
+        grossWeightG: { type: ["integer", "null"] }
+        unitPricePaise: { type: integer }
+        quantity: { type: integer }
+        lineTotalPaise: { type: integer }
+
+    OrderEvent:
+      type: object
+      required: [id, toStatus, actorType, createdAt]
+      properties:
+        id: { type: string }
+        fromStatus: { type: ["string", "null"] }
+        toStatus: { type: string }
+        note: { type: ["string", "null"] }
+        actorType: { type: string }
+        createdAt: { type: string }
+
+    OrderAddress:
+      type: object
+      required: [receiverName, receiverPhone, line1, area, city, pincode]
+      properties:
+        label: { type: ["string", "null"] }
+        receiverName: { type: string }
+        receiverPhone: { type: string }
+        line1: { type: string }
+        line2: { type: ["string", "null"] }
+        area: { type: string }
+        city: { type: string }
+        state: { type: ["string", "null"] }
+        pincode: { type: string }
+
+    Order:
+      type: object
+      required:
+        [
+          id,
+          orderNumber,
+          status,
+          paymentMethod,
+          paymentStatus,
+          address,
+          slotLabel,
+          deliveryDate,
+          items,
+          subtotalPaise,
+          deliveryFeePaise,
+          handlingFeePaise,
+          totalPaise,
+          events,
+          canCancel,
+          createdAt,
+        ]
+      properties:
+        id: { type: string }
+        orderNumber: { type: string }
+        status:
+          type: string
+          enum:
+            [
+              PENDING_PAYMENT,
+              PLACED,
+              CONFIRMED,
+              PACKED,
+              OUT_FOR_DELIVERY,
+              DELIVERED,
+              CANCELLED,
+              FAILED,
+            ]
+        paymentMethod: { type: string, enum: [COD, UPI, CARD, NETBANKING] }
+        paymentStatus: { type: string, enum: [PENDING, PAID, FAILED, REFUNDED] }
+        address:
+          $ref: "#/components/schemas/OrderAddress"
+        slotLabel: { type: string }
+        deliveryDate: { type: string }
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        subtotalPaise: { type: integer }
+        deliveryFeePaise: { type: integer }
+        handlingFeePaise: { type: integer }
+        discountPaise: { type: integer }
+        totalPaise: { type: integer }
+        deliveryOtp:
+          type: ["string", "null"]
+          description: Only returned to the owning customer once the order is out for delivery
+        riderName: { type: ["string", "null"] }
+        riderPhone: { type: ["string", "null"] }
+        customerNote: { type: ["string", "null"] }
+        cancellationReason: { type: ["string", "null"] }
+        canCancel: { type: boolean }
+        createdAt: { type: string }
+        deliveredAt: { type: ["string", "null"] }
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderEvent"
+
+    OrderInput:
+      type: object
+      required: [addressId, slotId, paymentMethod]
+      properties:
+        addressId: { type: string }
+        slotId: { type: string }
+        paymentMethod: { type: string, enum: [COD, UPI, CARD, NETBANKING] }
+        customerNote: { type: string }
+
+    PaymentResultInput:
+      type: object
+      required: [outcome]
+      properties:
+        outcome: { type: string, enum: [SUCCESS, FAILURE] }
+        reference: { type: string }
+
+    CancellationInput:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1 }
+
+    # ------------------------------------------------------------ ADMIN
+    StaffCredentialsInput:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, minLength: 1 }
+        password: { type: string, minLength: 1 }
+
+    Staff:
+      type: object
+      required: [id, email, role, fullName, isActive]
+      properties:
+        id: { type: string }
+        email: { type: string }
+        role: { type: string, enum: [ADMIN, OPS, RIDER] }
+        fullName: { type: string }
+        phone: { type: ["string", "null"] }
+        isActive: { type: boolean }
+        deliveriesToday: { type: integer }
+
+    StaffSession:
+      type: object
+      required: [token, staff]
+      properties:
+        token: { type: string }
+        staff: { $ref: "#/components/schemas/Staff" }
+
+    StaffInput:
+      type: object
+      required: [email, password, fullName, role]
+      properties:
+        email: { type: string, minLength: 1 }
+        password: { type: string, minLength: 4 }
+        fullName: { type: string, minLength: 1 }
+        phone: { type: string }
+        role: { type: string, enum: [ADMIN, OPS, RIDER] }
+
+    StaffUpdate:
+      type: object
+      properties:
+        fullName: { type: string, minLength: 1 }
+        phone: { type: string }
+        role: { type: string, enum: [ADMIN, OPS, RIDER] }
+        isActive: { type: boolean }
+        password: { type: string, minLength: 4 }
+
+    StatusCount:
+      type: object
+      required: [status, count]
+      properties:
+        status: { type: string }
+        count: { type: integer }
+
+    RevenuePoint:
+      type: object
+      required: [date, revenuePaise, orders]
+      properties:
+        date: { type: string }
+        revenuePaise: { type: integer }
+        orders: { type: integer }
+
+    SlotLoad:
+      type: object
+      required: [slotId, label, orders, capacity]
+      properties:
+        slotId: { type: string }
+        label: { type: string }
+        orders: { type: integer }
+        capacity: { type: integer }
+
+    AdminDashboard:
+      type: object
+      required:
+        [
+          ordersToday,
+          revenueTodayPaise,
+          pendingActionCount,
+          lowStockCount,
+          statusBreakdown,
+          revenueTrend,
+          needsAction,
+          lowStock,
+          slotLoad,
+          storeOpen,
+        ]
+      properties:
+        storeOpen: { type: boolean }
+        ordersToday: { type: integer }
+        revenueTodayPaise: { type: integer }
+        averageOrderValuePaise: { type: integer }
+        pendingActionCount: { type: integer }
+        lowStockCount: { type: integer }
+        outForDeliveryCount: { type: integer }
+        statusBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatusCount"
+        revenueTrend:
+          type: array
+          items:
+            $ref: "#/components/schemas/RevenuePoint"
+        needsAction:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminOrder"
+        lowStock:
+          type: array
+          items:
+            $ref: "#/components/schemas/InventoryRow"
+        slotLoad:
+          type: array
+          items:
+            $ref: "#/components/schemas/SlotLoad"
+
+    AdminOrder:
+      type: object
+      required:
+        [
+          id,
+          orderNumber,
+          status,
+          paymentMethod,
+          paymentStatus,
+          customerName,
+          customerPhone,
+          address,
+          slotLabel,
+          deliveryDate,
+          items,
+          totalPaise,
+          itemCount,
+          allowedTransitions,
+          events,
+          createdAt,
+        ]
+      properties:
+        id: { type: string }
+        orderNumber: { type: string }
+        status: { type: string }
+        paymentMethod: { type: string }
+        paymentStatus: { type: string }
+        customerName: { type: string }
+        customerPhone: { type: string }
+        address:
+          $ref: "#/components/schemas/OrderAddress"
+        slotId: { type: ["string", "null"] }
+        slotLabel: { type: string }
+        deliveryDate: { type: string }
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        subtotalPaise: { type: integer }
+        deliveryFeePaise: { type: integer }
+        handlingFeePaise: { type: integer }
+        totalPaise: { type: integer }
+        itemCount: { type: integer }
+        riderId: { type: ["string", "null"] }
+        riderName: { type: ["string", "null"] }
+        # deliveryOtp is deliberately NOT exposed to staff. It is the customer's
+        # proof that the right person reached their door, and is only ever
+        # compared server-side at handover.
+        customerNote: { type: ["string", "null"] }
+        cancellationReason: { type: ["string", "null"] }
+        flaggedUnreachable: { type: boolean }
+        allowedTransitions:
+          type: array
+          items: { type: string }
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderEvent"
+        createdAt: { type: string }
+        deliveredAt: { type: ["string", "null"] }
+
+    OrderStatusInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum:
+            [
+              PLACED,
+              CONFIRMED,
+              PACKED,
+              OUT_FOR_DELIVERY,
+              DELIVERED,
+              CANCELLED,
+              FAILED,
+            ]
+        note: { type: string }
+
+    RiderAssignmentInput:
+      type: object
+      required: [riderId]
+      properties:
+        riderId: { type: string }
+
+    InventoryRow:
+      type: object
+      required:
+        [
+          variantId,
+          productId,
+          productName,
+          categoryName,
+          cutType,
+          packLabel,
+          sku,
+          pricePaise,
+          mrpPaise,
+          stockQty,
+          lowStockAt,
+          stockState,
+          isActive,
+        ]
+      properties:
+        variantId: { type: string }
+        productId: { type: string }
+        productName: { type: string }
+        productNameLocal: { type: ["string", "null"] }
+        categoryName: { type: string }
+        cutType: { type: string }
+        packLabel: { type: string }
+        sku: { type: string }
+        pricePaise: { type: integer }
+        mrpPaise: { type: integer }
+        stockQty: { type: integer }
+        lowStockAt: { type: integer }
+        stockState: { type: string, enum: [OUT, LOW, OK] }
+        isActive: { type: boolean }
+
+    InventoryLineInput:
+      type: object
+      required: [variantId]
+      properties:
+        variantId: { type: string }
+        stockQty: { type: integer, minimum: 0 }
+        pricePaise: { type: integer, minimum: 0 }
+        isActive: { type: boolean }
+
+    InventoryBulkInput:
+      type: object
+      required: [updates]
+      properties:
+        updates:
+          type: array
+          items:
+            $ref: "#/components/schemas/InventoryLineInput"
+
+    StoreSettings:
+      type: object
+      required:
+        [
+          storeOpen,
+          codEnabled,
+          deliveryFeePaise,
+          freeDeliveryThresholdPaise,
+          handlingFeePaise,
+          codMaxOrderPaise,
+          supportPhone,
+          fssaiLicenseNo,
+        ]
+      properties:
+        storeOpen: { type: boolean }
+        codEnabled: { type: boolean }
+        deliveryFeePaise: { type: integer }
+        freeDeliveryThresholdPaise: { type: integer }
+        handlingFeePaise: { type: integer }
+        codMaxOrderPaise: { type: integer }
+        supportPhone: { type: string }
+        supportWhatsapp: { type: ["string", "null"] }
+        fssaiLicenseNo: { type: string }
+
+    StoreSettingsUpdate:
+      type: object
+      properties:
+        storeOpen: { type: boolean }
+        codEnabled: { type: boolean }
+        deliveryFeePaise: { type: integer, minimum: 0 }
+        freeDeliveryThresholdPaise: { type: integer, minimum: 0 }
+        handlingFeePaise: { type: integer, minimum: 0 }
+        codMaxOrderPaise: { type: integer, minimum: 0 }
+        supportPhone: { type: string }
+        supportWhatsapp: { type: string }
+        fssaiLicenseNo: { type: string }
+
+    Pincode:
+      type: object
+      required: [pincode, areaName, codEnabled, isActive]
+      properties:
+        pincode: { type: string }
+        areaName: { type: string }
+        codEnabled: { type: boolean }
+        isActive: { type: boolean }
+
+    PincodeInput:
+      type: object
+      required: [pincode, areaName]
+      properties:
+        pincode: { type: string, minLength: 6, maxLength: 6 }
+        areaName: { type: string, minLength: 1 }
+        codEnabled: { type: boolean }
+
+    # ------------------------------------------------------------ RIDER
+    RiderOrder:
+      type: object
+      required:
+        [
+          id,
+          orderNumber,
+          status,
+          customerName,
+          customerPhone,
+          address,
+          slotLabel,
+          itemCount,
+          totalPaise,
+          collectCashPaise,
+          otpAttemptsRemaining,
+          flaggedUnreachable,
+        ]
+      properties:
+        id: { type: string }
+        orderNumber: { type: string }
+        status: { type: string }
+        customerName: { type: string }
+        customerPhone: { type: string }
+        address:
+          $ref: "#/components/schemas/OrderAddress"
+        slotLabel: { type: string }
+        itemCount: { type: integer }
+        totalPaise: { type: integer }
+        collectCashPaise: { type: integer }
+        otpAttemptsRemaining: { type: integer }
+        flaggedUnreachable: { type: boolean }
+        deliveredAt: { type: ["string", "null"] }
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+
+    DeliveryOtpInput:
+      type: object
+      required: [otp]
+      properties:
+        otp: { type: string, minLength: 4, maxLength: 4 }
+
+    # ------------------------------------------------------------ PUBLIC
+    ServiceArea:
+      type: object
+      required: [pincode, areaName]
+      properties:
+        pincode: { type: string }
+        areaName: { type: string }
+
+    PublicSummary:
+      type: object
+      required:
+        [featured, categories, serviceAreas, settings, productCount, storeOpen]
+      properties:
+        storeOpen: { type: boolean }
+        productCount: { type: integer }
+        featured:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/Category"
+        serviceAreas:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceArea"
+        nextSlot:
+          oneOf:
+            - $ref: "#/components/schemas/DeliverySlot"
+            - type: "null"
+        settings:
+          $ref: "#/components/schemas/StoreSettings"
