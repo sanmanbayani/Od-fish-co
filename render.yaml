@@ -1,0 +1,50 @@
+# Render blueprint — OD Fish Co. API server.
+#
+# Apply from Render: New > Blueprint, pointed at this repository.
+#
+# Two environment variables are deliberately absent here: WEB_ORIGINS and
+# CROSS_SITE_COOKIES. The server refuses to boot with CROSS_SITE_COOKIES=true and
+# no WEB_ORIGINS (relaxing SameSite without an origin allow-list is a real hole),
+# and the Vercel URL does not exist yet on the first deploy. Add both in the
+# Render dashboard once the website is live — see DEPLOYMENT.md, step 4.
+
+services:
+  - type: web
+    name: od-fish-api
+    runtime: node
+    plan: free
+    # Closest Render region to both the Mumbai customers and the Seoul database.
+    region: singapore
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /api/healthz
+
+    # The filter matters. Without it this installs the whole monorepo, including
+    # the Expo app's React Native toolchain, which the API server never touches
+    # and which dominates both install time and disk on a free instance.
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --filter '@workspace/api-server...' && pnpm --filter @workspace/api-server run build
+    startCommand: node artifacts/api-server/dist/index.mjs
+
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+
+      # The code treats an unset NODE_ENV as public and gates accordingly, so
+      # this is not what keeps development conveniences switched off — it is set
+      # so logging and dependency behaviour match a production run.
+      - key: NODE_ENV
+        value: production
+
+      - key: LOG_LEVEL
+        value: info
+
+      # Supabase pooler credentials. Entered once when the blueprint is applied;
+      # `sync: false` keeps them out of the repository.
+      #   SUPABASE_DB_HOST  aws-0-<region>.pooler.supabase.com
+      #   SUPABASE_DB_USER  postgres.<project-ref>
+      - key: SUPABASE_DB_HOST
+        sync: false
+      - key: SUPABASE_DB_USER
+        sync: false
+      - key: SUPABASE_DB_PASSWORD
+        sync: false

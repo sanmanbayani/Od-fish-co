@@ -158,3 +158,14 @@ package.
   user should see, not something to retry past.
 - **Rotate the seeded staff passwords before real orders.** The seed creates demo admin,
   ops, and rider accounts with a shared known password.
+
+## Deploying
+
+Production runs the API on Render and the website on Vercel, with Postgres staying on
+Supabase. `render.yaml` and `vercel.json` hold the build configuration; **`DEPLOYMENT.md`**
+has the step-by-step. Read it before changing either file — the two services must be brought
+up in a specific order, because the API refuses to boot with `CROSS_SITE_COOKIES=true` until
+`WEB_ORIGINS` names the Vercel URL, which does not exist on the first deploy.
+
+Note that `vite.config.ts` only demands `PORT` and `BASE_PATH` when running a dev server.
+A build has neither, and requiring them unconditionally breaks Vercel at its first step.

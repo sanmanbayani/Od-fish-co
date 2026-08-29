@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "pnpm install --frozen-lockfile --filter '@workspace/od-fish-web...'",
+  "buildCommand": "pnpm --filter @workspace/od-fish-web run build",
+  "outputDirectory": "artifacts/od-fish-web/dist/public",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
