@@ -1,6 +1,7 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -18,15 +19,18 @@ import {
   useGetHomeFeed,
   useJoinWaitlist,
   useListAddresses,
+  useListDeliverySlots,
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { mint, overlay, radii, spacing } from '@/constants/colors';
 import { apiErrorMessage, countdown, deliveryDate } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
+import { setPreferredSlot, usePreferredSlot } from '@/lib/preferredSlot';
 import { LogoGlyph } from '@/components/BrandMark';
 import { CartBar } from '@/components/CartBar';
 import { CategoryTile } from '@/components/CategoryTile';
 import { ProductCard } from '@/components/ProductCard';
+import { SlotPicker, slotKey } from '@/components/SlotPicker';
 import { Text } from '@/components/ui/Text';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -64,6 +68,25 @@ export default function HomeScreen() {
   const addresses = useListAddresses({
     query: { enabled: Boolean(customer), queryKey: getListAddressesQueryKey() },
   });
+
+  // Slot sheet: the strip in the hero opens a picker, and the chosen slot is
+  // remembered for this session so checkout starts from it. The full list is
+  // fetched only once the sheet opens — the feed already carries the next slot.
+  const [slotSheetOpen, setSlotSheetOpen] = useState(false);
+  const preferredSlot = usePreferredSlot();
+  const slotList = useListDeliverySlots({
+    query: { queryKey: ['slots'], enabled: slotSheetOpen },
+  });
+
+  // If the picked slot hit its cutoff while the customer browsed, drop it the
+  // moment fresh slot data proves it closed — never display a dead choice.
+  useEffect(() => {
+    if (!slotSheetOpen || !slotList.data || !preferredSlot) return;
+    const stillOpen = slotList.data.some(
+      (s) => s.isOpen && slotKey(s) === preferredSlot.key,
+    );
+    if (!stillOpen) setPreferredSlot(null);
+  }, [slotSheetOpen, slotList.data, preferredSlot]);
   const deliverTo = addresses.data?.find((a) => a.isDefault) ?? addresses.data?.[0];
   const locationLabel = !customer
     ? 'Set your location'
@@ -101,6 +124,15 @@ export default function HomeScreen() {
 
   const data = feed.data;
   const slot = data.nextSlot;
+  const shownSlot =
+    preferredSlot ??
+    (slot
+      ? { key: slotKey(slot), label: slot.label, deliveryDate: slot.deliveryDate }
+      : null);
+  const stripHint =
+    (slot && shownSlot && slotKey(slot) === shownSlot.key
+      ? countdown(slot.secondsToCutoff)
+      : null) ?? (preferredSlot ? 'Your slot' : null);
   const result = checked ? serviceability.data : undefined;
 
   return (
@@ -191,18 +223,24 @@ export default function HomeScreen() {
             transition={200}
           />
 
-          {slot ? (
+          {shownSlot ? (
             <Pressable
-              onPress={() => router.push('/(tabs)/shop')}
+              onPress={() => setSlotSheetOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Choose your delivery slot"
               style={[styles.slotStrip, { borderColor: overlay.hairline }]}
             >
-              <Feather name="clock" size={14} color={overlay.mutedForeground} />
+              <Feather
+                name={preferredSlot ? 'check-circle' : 'clock'}
+                size={14}
+                color={preferredSlot ? mint : overlay.mutedForeground}
+              />
               <Text variant="smallMedium" tone="inverse" style={styles.flex}>
-                {deliveryDate(slot.deliveryDate)} · {slot.label}
+                {deliveryDate(shownSlot.deliveryDate)} · {shownSlot.label}
               </Text>
-              {countdown(slot.secondsToCutoff) ? (
+              {stripHint ? (
                 <Text variant="tiny" style={{ color: mint }}>
-                  {countdown(slot.secondsToCutoff)}
+                  {stripHint}
                 </Text>
               ) : null}
               <Feather
@@ -220,6 +258,66 @@ export default function HomeScreen() {
             </View>
           )}
         </View>
+
+        <Modal
+          visible={slotSheetOpen}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setSlotSheetOpen(false)}
+        >
+          <View style={styles.sheetRoot}>
+            <Pressable
+              style={styles.sheetScrim}
+              onPress={() => setSlotSheetOpen(false)}
+              accessibilityLabel="Close the slot picker"
+            />
+            <View
+              style={[
+                styles.sheet,
+                {
+                  backgroundColor: colors.background,
+                  paddingBottom: insets.bottom + spacing.lg,
+                },
+              ]}
+            >
+              <View
+                style={[styles.sheetHandle, { backgroundColor: colors.border }]}
+              />
+              <Text variant="section">Delivery slots</Text>
+              <Text variant="body" tone="muted" style={styles.sheetSub}>
+                Pick when the catch should reach you — it will already be
+                selected at checkout.
+              </Text>
+              {slotList.isLoading ? (
+                <ActivityIndicator
+                  color={colors.primary}
+                  style={styles.sheetBusy}
+                />
+              ) : slotList.isError ? (
+                <ErrorView
+                  message="Could not load delivery slots. Check your connection and try again."
+                  onRetry={() => slotList.refetch()}
+                />
+              ) : !slotList.data || slotList.data.length === 0 ? (
+                <Text variant="body" tone="muted" style={styles.sheetBusy}>
+                  Every slot has closed for now. Fresh slots open each morning
+                  at 6am.
+                </Text>
+              ) : (
+                <ScrollView bounces={false}>
+                  <SlotPicker
+                    slots={slotList.data}
+                    selectedKey={shownSlot?.key ?? null}
+                    onSelect={(s) => {
+                      setPreferredSlot(s);
+                      setSlotSheetOpen(false);
+                    }}
+                  />
+                </ScrollView>
+              )}
+            </View>
+          </View>
+        </Modal>
 
         {/* Pincode serviceability */}
         <View style={styles.section}>
@@ -523,6 +621,27 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
   },
   flex: { flex: 1 },
+  sheetRoot: { flex: 1, justifyContent: 'flex-end' },
+  sheetScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(11, 26, 61, 0.55)',
+  },
+  sheet: {
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    maxHeight: '78%',
+  },
+  sheetHandle: {
+    alignSelf: 'center',
+    width: 44,
+    height: 4,
+    borderRadius: radii.pill,
+    marginBottom: spacing.md,
+  },
+  sheetSub: { marginTop: 4, marginBottom: spacing.md },
+  sheetBusy: { marginVertical: spacing.lg },
   section: { marginTop: spacing.xl, paddingHorizontal: spacing.lg },
   sectionHeader: { marginBottom: spacing.md },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

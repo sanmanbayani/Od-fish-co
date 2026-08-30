@@ -17,6 +17,7 @@ import { radii, spacing } from '@/constants/colors';
 import { apiErrorMessage, rupees } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
 import { SlotPicker, slotKey } from '@/components/SlotPicker';
+import { getPreferredSlot, setPreferredSlot } from '@/lib/preferredSlot';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { KeyboardStickyFooter } from '@/components/KeyboardStickyFooter';
 import { Text } from '@/components/ui/Text';
@@ -80,7 +81,13 @@ export default function CheckoutScreen() {
 
   useEffect(() => {
     if (!selectedSlotKey && openSlots.length > 0) {
-      setSelectedSlotKey(slotKey(openSlots[0]));
+      // Start from the slot picked on the home screen when it is still open;
+      // otherwise fall back to the earliest open window.
+      const preferred = getPreferredSlot();
+      const match = preferred
+        ? openSlots.find((s) => slotKey(s) === preferred.key)
+        : undefined;
+      setSelectedSlotKey(slotKey(match ?? openSlots[0]));
     }
   }, [openSlots, selectedSlotKey]);
 
@@ -249,7 +256,10 @@ export default function CheckoutScreen() {
             <SlotPicker
               slots={slots.data ?? []}
               selectedKey={selectedSlotKey}
-              onSelect={(slot) => setSelectedSlotKey(slotKey(slot))}
+              onSelect={(slot) => {
+                setSelectedSlotKey(slotKey(slot));
+                setPreferredSlot(slot);
+              }}
             />
           )}
         </View>
