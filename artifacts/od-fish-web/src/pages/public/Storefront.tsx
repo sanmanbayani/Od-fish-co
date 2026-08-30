@@ -61,9 +61,9 @@ export default function Storefront() {
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
-      <section className="relative pt-12 md:pt-20 bg-primary text-primary-foreground overflow-hidden">
+      <section className="relative pt-12 md:pt-20 pb-16 md:pb-24 bg-primary text-primary-foreground">
         
-        <div className="container relative z-20 mx-auto px-4 md:px-8 mb-16 md:mb-24">
+        <div className="container relative z-20 mx-auto px-4 md:px-8">
           <div className="max-w-3xl mx-auto text-center flex flex-col items-center">
             <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-foreground/10 text-primary-foreground text-sm font-medium border border-primary-foreground/20 backdrop-blur-md mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
               <span className={`w-2 h-2 rounded-full ${summary.storeOpen ? 'bg-green-400 animate-pulse' : 'bg-destructive'}`}></span>
@@ -158,14 +158,6 @@ export default function Storefront() {
           </div>
         </div>
 
-        {/* Illustration */}
-        <div className="relative w-full md:h-[52vh] md:max-h-[560px] md:min-h-[280px] mt-12 md:mt-10 pointer-events-none flex items-end justify-center overflow-hidden">
-          <img 
-            src={`${import.meta.env.BASE_URL}brand/boat-scene.svg`} 
-            alt="Dawn catch" 
-            className="w-full max-w-[1600px] h-auto md:h-full object-contain object-bottom animate-drift origin-bottom"
-          />
-        </div>
       </section>
 
       {/* Trust Signals */}

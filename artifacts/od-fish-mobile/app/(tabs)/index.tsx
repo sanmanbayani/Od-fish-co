@@ -10,7 +10,6 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -34,8 +33,6 @@ import { Badge } from '@/components/ui/Badge';
 import { LoadingView, ErrorView } from '@/components/ui/StateViews';
 import { CATALOGUE_POLL_MS } from '@/constants/query';
 import { Screen, TAB_BAR_CLEARANCE } from '@/components/ui/Screen';
-
-const BOAT_ART = require('../../assets/images/boat-scene.png');
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -201,13 +198,6 @@ export default function HomeScreen() {
               ? `Fresh from Sassoon Dock this morning, ${customer.fullName.split(' ')[0]} — cleaned and cut to order.`
               : 'Sassoon Dock’s morning catch, cleaned and cut to order for Mumbai kitchens.'}
           </Text>
-
-          <Image
-            source={BOAT_ART}
-            style={styles.heroArt}
-            contentFit="contain"
-            transition={200}
-          />
 
           {shownSlot ? (
             <Pressable
@@ -476,12 +466,11 @@ const styles = StyleSheet.create({
   },
   headline: { marginTop: spacing.md },
   subline: { color: overlay.mutedForeground, marginTop: 6, lineHeight: 19 },
-  heroArt: { width: '100%', height: 168, marginTop: spacing.sm },
   slotStrip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderWidth: StyleSheet.hairlineWidth,
