@@ -26,7 +26,6 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
       </main>
 
       <footer className="bg-primary text-primary-foreground py-16 mt-20 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-[200%] h-6 bg-repeat-x opacity-10 animate-wave-slide" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}brand/wave-band.svg)`, backgroundSize: 'auto 100%' }}></div>
         
         <div className="container mx-auto px-4 md:px-8 grid grid-cols-1 md:grid-cols-4 gap-12 relative z-10">
           <div className="md:col-span-2">

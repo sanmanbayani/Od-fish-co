@@ -63,7 +63,6 @@
 
   --animate-drift: drift 8s ease-in-out infinite;
   --animate-float: float 6s ease-in-out infinite;
-  --animate-wave-slide: wave-slide 20s linear infinite;
 
   @keyframes drift {
     0%, 100% { transform: translateY(0) rotate(0deg); }
@@ -72,10 +71,6 @@
   @keyframes float {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-12px); }
-  }
-  @keyframes wave-slide {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
   }
 }
 

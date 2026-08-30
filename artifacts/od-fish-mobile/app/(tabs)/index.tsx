@@ -15,15 +15,13 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   getListAddressesQueryKey,
-  useCheckServiceability,
   useGetHomeFeed,
-  useJoinWaitlist,
   useListAddresses,
   useListDeliverySlots,
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { mint, overlay, radii, spacing } from '@/constants/colors';
-import { apiErrorMessage, countdown, deliveryDate } from '@/lib/format';
+import { countdown, deliveryDate } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
 import { setPreferredSlot, usePreferredSlot } from '@/lib/preferredSlot';
 import { LogoGlyph } from '@/components/BrandMark';
@@ -33,14 +31,11 @@ import { ProductCard } from '@/components/ProductCard';
 import { SlotPicker, slotKey } from '@/components/SlotPicker';
 import { Text } from '@/components/ui/Text';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { TextField } from '@/components/ui/TextField';
 import { LoadingView, ErrorView } from '@/components/ui/StateViews';
 import { CATALOGUE_POLL_MS } from '@/constants/query';
 import { Screen, TAB_BAR_CLEARANCE } from '@/components/ui/Screen';
 
 const BOAT_ART = require('../../assets/images/boat-scene.png');
-const FISH_ART = require('../../assets/images/fish-catch.png');
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -48,18 +43,10 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const gridWidth = Math.min((width - spacing.lg * 2 - 12) / 2, 260);
   const { customer } = useAuth();
-  const [pincode, setPincode] = useState('');
-  const [checked, setChecked] = useState<string | null>(null);
-  const [waitlisted, setWaitlisted] = useState(false);
-  const [waitlistError, setWaitlistError] = useState<string | null>(null);
 
   const feed = useGetHomeFeed({
     query: { queryKey: ['home'], refetchInterval: CATALOGUE_POLL_MS },
   });
-  const serviceability = useCheckServiceability(checked ?? '', {
-    query: { queryKey: ['serviceability', checked], enabled: Boolean(checked) },
-  });
-  const joinWaitlist = useJoinWaitlist();
 
   // Deliver-to chip: the customer's default address, their first one, or a
   // sign-in / add-address prompt. On failure we fall back to the city name —
@@ -133,7 +120,6 @@ export default function HomeScreen() {
     (slot && shownSlot && slotKey(slot) === shownSlot.key
       ? countdown(slot.secondsToCutoff)
       : null) ?? (preferredSlot ? 'Your slot' : null);
-  const result = checked ? serviceability.data : undefined;
 
   return (
     <Screen>
@@ -318,125 +304,6 @@ export default function HomeScreen() {
             </View>
           </View>
         </Modal>
-
-        {/* Pincode serviceability */}
-        <View style={styles.section}>
-          <View
-            style={[
-              styles.pinCard,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-                borderRadius: radii.xl,
-              },
-            ]}
-          >
-            <View style={styles.pinHead}>
-              <View style={styles.flex}>
-                <Text variant="label" tone="muted" uppercase>
-                  Do we deliver to you?
-                </Text>
-                <Text variant="small" tone="muted" style={styles.pinCaption}>
-                  Mumbai pincodes, same-day slots.
-                </Text>
-              </View>
-              <Image source={FISH_ART} style={styles.pinArt} contentFit="contain" />
-            </View>
-            <View style={styles.pinRow}>
-              <TextField
-                placeholder="Mumbai pincode"
-                keyboardType="number-pad"
-                maxLength={6}
-                value={pincode}
-                onChangeText={(t) => {
-                  setPincode(t.replace(/\D/g, ''));
-                  setChecked(null);
-                  setWaitlisted(false);
-                  setWaitlistError(null);
-                }}
-                containerStyle={styles.flex}
-              />
-              <Button
-                label="Check"
-                size="md"
-                disabled={pincode.length !== 6}
-                onPress={() => setChecked(pincode)}
-                style={styles.pinBtn}
-              />
-            </View>
-
-            {serviceability.isFetching ? (
-              <View style={styles.pinResult}>
-                <ActivityIndicator size="small" color={colors.primary} />
-              </View>
-            ) : serviceability.isError ? (
-              <View style={styles.pinResult}>
-                <Feather name="alert-circle" size={15} color={colors.destructive} />
-                <Text variant="small" tone="danger" style={styles.flex}>
-                  {apiErrorMessage(
-                    serviceability.error,
-                    'Could not check that pincode just now. Please try again.',
-                  )}
-                </Text>
-              </View>
-            ) : result ? (
-              result.serviceable ? (
-                <View style={styles.pinResult}>
-                  <Feather name="check-circle" size={15} color={colors.success} />
-                  <Text variant="small" tone="success" style={styles.flex}>
-                    We deliver to {result.areaName ?? result.pincode}
-                    {result.codEnabled ? ' · cash on delivery available' : ''}.
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.pinMiss}>
-                  <View style={styles.pinResult}>
-                    <Feather name="x-circle" size={15} color={colors.destructive} />
-                    <Text variant="small" tone="danger" style={styles.flex}>
-                      Not on our route yet.
-                    </Text>
-                  </View>
-                  {waitlisted ? (
-                    <Text variant="small" tone="muted">
-                      Noted — we will message you the day {result.pincode} opens up.
-                    </Text>
-                  ) : (
-                    <Button
-                      label="Tell me when you do"
-                      variant="outline"
-                      size="sm"
-                      loading={joinWaitlist.isPending}
-                      onPress={async () => {
-                        if (!customer?.phone) {
-                          router.push('/login');
-                          return;
-                        }
-                        setWaitlistError(null);
-                        try {
-                          await joinWaitlist.mutateAsync({
-                            data: { pincode: result.pincode, phone: customer.phone },
-                          });
-                          setWaitlisted(true);
-                        } catch (err) {
-                          // Claiming "noted" on a failed request means the
-                          // customer waits for a message that will never come.
-                          setWaitlistError(
-                            apiErrorMessage(err, 'Could not add your number. Please try again.'),
-                          );
-                        }
-                      }}
-                    />
-                  )}
-                  {waitlistError ? (
-                    <Text variant="small" tone="danger">
-                      {waitlistError}
-                    </Text>
-                  ) : null}
-                </View>
-              )
-            ) : null}
-          </View>
-        </View>
 
         {/* Categories */}
         {data.categories.length > 0 ? (
@@ -647,14 +514,6 @@ const styles = StyleSheet.create({
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   seeAll: { flexDirection: 'row', alignItems: 'center', gap: 1 },
   caption: { marginTop: 2 },
-  pinCard: { padding: spacing.lg, borderWidth: StyleSheet.hairlineWidth },
-  pinHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  pinCaption: { marginTop: 2 },
-  pinArt: { width: 86, height: 86, marginVertical: -6 },
-  pinRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 10 },
-  pinBtn: { marginTop: 0 },
-  pinResult: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 12 },
-  pinMiss: { gap: 10 },
   rail: { gap: 12, paddingRight: spacing.lg },
   grid: {
     flexDirection: 'row',

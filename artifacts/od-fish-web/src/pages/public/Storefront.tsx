@@ -159,19 +159,13 @@ export default function Storefront() {
         </div>
 
         {/* Illustration */}
-        <div className="relative w-full h-[40vh] md:h-[55vh] min-h-[300px] mt-20 md:mt-10 pointer-events-none flex items-end justify-center overflow-hidden">
-          {/* Subtle wave layer behind boat */}
-          <div className="absolute bottom-12 md:bottom-16 left-0 w-[200%] h-24 bg-repeat-x opacity-20 animate-wave-slide" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}brand/wave-band.svg)`, backgroundSize: 'auto 100%', backgroundPosition: 'bottom' }}></div>
-          
+        <div className="relative w-full md:h-[52vh] md:max-h-[560px] md:min-h-[280px] mt-12 md:mt-10 pointer-events-none flex items-end justify-center overflow-hidden">
           <img 
             src={`${import.meta.env.BASE_URL}brand/boat-scene.svg`} 
             alt="Dawn catch" 
-            className="w-full max-w-[1600px] h-full object-contain object-bottom animate-drift origin-bottom relative z-10 scale-125 md:scale-100 mb-[-5%]"
+            className="w-full max-w-[1600px] h-auto md:h-full object-contain object-bottom animate-drift origin-bottom"
           />
         </div>
-        
-        {/* Front wave divider transitioning to next section */}
-        <div className="absolute bottom-0 left-0 w-[200%] h-8 md:h-12 bg-repeat-x z-20 animate-wave-slide" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}brand/wave-band.svg)`, backgroundSize: 'auto 100%', backgroundPosition: 'bottom' }}></div>
       </section>
 
       {/* Trust Signals */}
@@ -285,7 +279,7 @@ export default function Storefront() {
       {/* The Process Section */}
       <section id="process" className="py-32 bg-background relative overflow-hidden">
         {/* Floating fish illustration */}
-        <div className="absolute top-10 right-[-10%] md:right-10 w-96 h-auto opacity-15 md:opacity-30 pointer-events-none animate-float">
+        <div className="absolute top-16 md:top-10 right-[-12%] md:right-12 w-64 md:w-96 h-auto opacity-20 md:opacity-35 pointer-events-none animate-float">
           <img 
             src={`${import.meta.env.BASE_URL}brand/fish-catch.svg`} 
             alt="" 
@@ -335,8 +329,6 @@ export default function Storefront() {
 
       {/* App CTA */}
       <section id="delivery" className="py-32 bg-primary text-primary-foreground relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-[200%] h-8 md:h-12 bg-repeat-x z-20 animate-wave-slide" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}brand/wave-band.svg)`, backgroundSize: 'auto 100%', transform: 'rotate(180deg)' }}></div>
-        
         <div className="container mx-auto px-4 md:px-8 text-center max-w-3xl relative z-10">
           <Fish className="w-16 h-16 mx-auto mb-8 opacity-50 animate-float" />
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold mb-8 leading-tight">Ready to taste <span className="italic font-light">the difference?</span></h2>
