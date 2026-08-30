@@ -132,6 +132,23 @@ export const JoinWaitlistResponse = zod.object({
 
 
 /**
+ * @summary Capture an email address for the mobile app launch announcement
+ */
+export const joinAppWaitlistBodyEmailMin = 5;
+export const joinAppWaitlistBodyEmailMax = 254;
+
+
+
+export const JoinAppWaitlistBody = zod.object({
+  "email": zod.string().email().min(joinAppWaitlistBodyEmailMin).max(joinAppWaitlistBodyEmailMax)
+})
+
+export const JoinAppWaitlistResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
  * @summary Send a login OTP to an Indian mobile number
  */
 export const requestOtpBodyPhoneMin = 10;

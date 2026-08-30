@@ -180,6 +180,14 @@ export interface WaitlistEntryInput {
   phone: string;
 }
 
+export interface AppWaitlistInput {
+  /**
+     * @minLength 5
+     * @maxLength 254
+     */
+  email: string;
+}
+
 export interface Category {
   id: string;
   slug: string;

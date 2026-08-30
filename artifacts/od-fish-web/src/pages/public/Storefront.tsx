@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { useGetPublicSummary, useCheckServiceability, getCheckServiceabilityQueryKey, useJoinWaitlist } from "@workspace/api-client-react";
+import { useGetPublicSummary, useCheckServiceability, getCheckServiceabilityQueryKey, useJoinWaitlist, useJoinAppWaitlist } from "@workspace/api-client-react";
 import { formatPaise, formatWeightRange } from "@/lib/format";
 import { apiErrorMessage } from "@/lib/api-error";
 import { mediaUrl } from "@/lib/api-config";
 import { Button } from "@/components/ui/button";
-import { Fish, MapPin, Clock, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { Fish, MapPin, Clock, ShieldCheck, CheckCircle2, Apple, Play, Mail } from "lucide-react";
 
 export default function Storefront() {
   const { data: summary, isLoading, error } = useGetPublicSummary();
@@ -39,6 +39,24 @@ export default function Storefront() {
         }
       );
     }
+  };
+
+  // App-launch waitlist (bottom CTA) — its own mutation and state so it never
+  // entangles with the hero pincode checker's waitlist flow.
+  const joinAppWaitlist = useJoinAppWaitlist();
+  const [ctaEmail, setCtaEmail] = useState("");
+  const [ctaJoined, setCtaJoined] = useState(false);
+  const ctaEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(ctaEmail.trim());
+
+  const handleCtaWaitlist = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ctaEmailValid || joinAppWaitlist.isPending) return;
+    joinAppWaitlist.mutate(
+      { data: { email: ctaEmail.trim() } },
+      {
+        onSuccess: () => setCtaJoined(true)
+      }
+    );
   };
 
   if (isLoading) {
@@ -319,19 +337,80 @@ export default function Storefront() {
         </div>
       </section>
 
-      {/* App CTA */}
-      <section id="delivery" className="py-32 bg-primary text-primary-foreground relative overflow-hidden">
-        <div className="container mx-auto px-4 md:px-8 text-center max-w-3xl relative z-10">
-          <Fish className="w-16 h-16 mx-auto mb-8 opacity-50 animate-float" />
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold mb-8 leading-tight">Ready to taste <span className="italic font-light">the difference?</span></h2>
-          <p className="text-xl text-primary-foreground/80 mb-12 font-medium">
-            Download our consumer app to place your first order. 
-            Free delivery on your first catch.
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Button size="lg" variant="secondary" className="rounded-full h-14 px-10 text-lg font-bold hover-elevate shadow-xl" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
-              Check My Pincode
-            </Button>
+      {/* App launch waitlist */}
+      <section id="delivery" className="relative bg-primary text-primary-foreground pt-20 md:pt-24 pb-12 md:pb-14">
+        <div className="container relative z-10 mx-auto px-4 md:px-8">
+          <div className="mx-auto max-w-3xl rounded-3xl border border-primary-foreground/15 bg-primary-foreground/[0.06] px-6 py-12 md:px-14 md:py-14 text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary-foreground/80">
+              <Fish className="h-3.5 w-3.5" /> Launching soon
+            </span>
+
+            {/* Headings default to `text-primary` (navy) via a base-layer rule,
+                which is invisible on this navy section — set the colour here. */}
+            <h2 className="mt-6 font-serif text-4xl md:text-5xl font-bold leading-[1.1] text-primary-foreground">
+              The app is <span className="italic font-light">almost here.</span>
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-lg text-primary-foreground/75 leading-relaxed">
+              OD Fish Co. arrives on the Google Play Store and the Apple App Store
+              shortly. Leave your email and we'll write to you the day it goes live.
+            </p>
+
+            {ctaJoined ? (
+              <div
+                className="mx-auto mt-8 flex max-w-lg items-center justify-center gap-3 rounded-2xl border border-primary-foreground/20 bg-primary-foreground/10 px-6 py-5"
+                data-testid="text-cta-waitlist-success"
+              >
+                <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-300" />
+                <span className="font-medium">You're on the list. We'll email you the day we launch.</span>
+              </div>
+            ) : (
+              <form onSubmit={handleCtaWaitlist} className="mx-auto mt-8 flex w-full max-w-lg flex-col gap-3 sm:flex-row">
+                <div className="relative flex-1">
+                  <Mail className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                  <input
+                    id="app-waitlist-email"
+                    aria-label="Email address for app launch waitlist"
+                    placeholder="you@example.com"
+                    value={ctaEmail}
+                    onChange={(e) => setCtaEmail(e.target.value)}
+                    className="h-14 w-full rounded-full bg-background pl-[3.25rem] pr-5 text-base font-medium text-foreground outline-none placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-primary-foreground/60"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    maxLength={254}
+                    data-testid="input-cta-waitlist-email"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  size="lg"
+                  variant="secondary"
+                  className="h-14 shrink-0 rounded-full px-8 text-base font-bold shadow-xl hover-elevate"
+                  disabled={!ctaEmailValid || joinAppWaitlist.isPending}
+                  data-testid="button-cta-waitlist-submit"
+                >
+                  {joinAppWaitlist.isPending ? "Adding you…" : "Join Waitlist"}
+                </Button>
+              </form>
+            )}
+
+            {joinAppWaitlist.isError && !ctaJoined && (
+              <p className="mt-4 text-sm font-medium text-red-300" data-testid="text-cta-waitlist-error">
+                {apiErrorMessage(joinAppWaitlist.error, "Could not add your email just now. Please try again.")}
+              </p>
+            )}
+
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+              <span className="inline-flex items-center gap-2 rounded-full border border-primary-foreground/15 bg-primary-foreground/5 px-4 py-2 text-sm font-medium text-primary-foreground/75">
+                <Play className="h-4 w-4" /> Google Play
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-primary-foreground/15 bg-primary-foreground/5 px-4 py-2 text-sm font-medium text-primary-foreground/75">
+                <Apple className="h-4 w-4" /> App Store
+              </span>
+            </div>
+            <p className="mt-5 text-xs text-primary-foreground/50">
+              One email when we launch. Nothing else, ever.
+            </p>
           </div>
         </div>
       </section>

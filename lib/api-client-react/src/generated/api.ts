@@ -29,6 +29,7 @@ import type {
   AdminDeliverySlotOpenInput,
   AdminDeliverySlotUpdate,
   AdminOrder,
+  AppWaitlistInput,
   CancellationInput,
   Cart,
   CartItemInput,
@@ -362,7 +363,7 @@ export const joinWaitlist = async (waitlistEntryInput: WaitlistEntryInput, optio
 
 
 
-export const getJoinWaitlistMutationOptions = <TError = ErrorType<unknown>,
+export const getJoinWaitlistMutationOptions = <TError = ErrorType<ErrorResult>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof joinWaitlist>>, TError,{data: BodyType<WaitlistEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof joinWaitlist>>, TError,{data: BodyType<WaitlistEntryInput>}, TContext> => {
 
@@ -391,12 +392,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type JoinWaitlistMutationResult = NonNullable<Awaited<ReturnType<typeof joinWaitlist>>>
     export type JoinWaitlistMutationBody = BodyType<WaitlistEntryInput>
-    export type JoinWaitlistMutationError = ErrorType<unknown>
+    export type JoinWaitlistMutationError = ErrorType<ErrorResult>
 
     /**
  * @summary Capture an out-of-area customer
  */
-export const useJoinWaitlist = <TError = ErrorType<unknown>,
+export const useJoinWaitlist = <TError = ErrorType<ErrorResult>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof joinWaitlist>>, TError,{data: BodyType<WaitlistEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof joinWaitlist>>,
@@ -405,6 +406,77 @@ export const useJoinWaitlist = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getJoinWaitlistMutationOptions(options));
+    }
+
+export const getJoinAppWaitlistUrl = () => {
+
+
+
+
+  return `/api/waitlist/app`
+}
+
+/**
+ * @summary Capture an email address for the mobile app launch announcement
+ */
+export const joinAppWaitlist = async (appWaitlistInput: AppWaitlistInput, options?: Parameters<typeof customFetch>[1]): Promise<OkResult> => {
+
+  return customFetch<OkResult>(getJoinAppWaitlistUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(appWaitlistInput)
+  }
+);}
+
+
+
+
+
+export const getJoinAppWaitlistMutationOptions = <TError = ErrorType<ErrorResult>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof joinAppWaitlist>>, TError,{data: BodyType<AppWaitlistInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof joinAppWaitlist>>, TError,{data: BodyType<AppWaitlistInput>}, TContext> => {
+
+const mutationKey = ['joinAppWaitlist'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof joinAppWaitlist>>, {data: BodyType<AppWaitlistInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  joinAppWaitlist(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type JoinAppWaitlistMutationResult = NonNullable<Awaited<ReturnType<typeof joinAppWaitlist>>>
+    export type JoinAppWaitlistMutationBody = BodyType<AppWaitlistInput>
+    export type JoinAppWaitlistMutationError = ErrorType<ErrorResult>
+
+    /**
+ * @summary Capture an email address for the mobile app launch announcement
+ */
+export const useJoinAppWaitlist = <TError = ErrorType<ErrorResult>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof joinAppWaitlist>>, TError,{data: BodyType<AppWaitlistInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof joinAppWaitlist>>,
+        TError,
+        {data: BodyType<AppWaitlistInput>},
+        TContext
+      > => {
+      return useMutation(getJoinAppWaitlistMutationOptions(options));
     }
 
 export const getRequestOtpUrl = () => {

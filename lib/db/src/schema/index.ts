@@ -257,6 +257,19 @@ export const waitlistEntries = pgTable("waitlist_entries", {
     .defaultNow(),
 });
 
+/**
+ * Emails captured by the "app launching soon" call to action on the website.
+ * Kept apart from `waitlist_entries` on purpose: that table answers "we do not
+ * deliver to your pincode yet", this one answers "tell me when the app ships".
+ */
+export const appWaitlistEntries = pgTable("app_waitlist_entries", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: varchar("email", { length: 254 }).notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 /* -------------------------------------------------------------------------- */
 /*                                    Cart                                    */
 /* -------------------------------------------------------------------------- */

@@ -15,6 +15,7 @@ export * from './adminDeliverySlotInput';
 export * from './adminDeliverySlotOpenInput';
 export * from './adminDeliverySlotUpdate';
 export * from './adminOrder';
+export * from './appWaitlistInput';
 export * from './cancellationInput';
 export * from './cart';
 export * from './cartBill';

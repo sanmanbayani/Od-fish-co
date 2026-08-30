@@ -74,3 +74,16 @@ an hour cycling through all four.
 active riders) by querying the tables directly rather than calling list endpoints and guessing
 whether they answer with an array or a wrapper object. The endpoints are worth exercising in
 the flow itself; they are a poor way to go shopping for test data.
+
+# Orval emits zod v4 syntax against a zod 3 pin
+
+The generator writes v4's top-level format helpers (`zod.email()`, and the same shape for
+other `format:` values) while the workspace pins zod 3, where those live on `zod.string()`.
+The spec's postprocess step exists solely to rewrite them and already covers `zod.int()`.
+
+**Why it matters:** the failure is a type error inside generated code, so the instinct is to
+edit the generated file or to blame the spec. Adding any new `format:` to the OpenAPI spec
+can reintroduce it with a different helper name.
+
+**How to apply:** when codegen fails on a `Property 'x' does not exist on type 'typeof zod'`,
+add the rewrite to the postprocessor rather than touching generated output or the spec.

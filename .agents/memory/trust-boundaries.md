@@ -73,3 +73,18 @@ fields must derive the amount from the order's own total and leave an order even
 actor. A cash order closed without the money stays unpaid on purpose — "delivered but owing"
 is a real state, which means it also needs a way to be settled later, or it becomes an order
 nobody can ever reconcile.
+
+# Public marketing forms are unauthenticated writes
+
+Waitlist-style forms on the public site let a stranger write rows without ever signing in.
+A disabled submit button is not a control — it does not exist for a caller using curl — so
+each such endpoint needs a server-side per-IP budget, shared across sibling public forms.
+
+**Why:** dev and production share one database, so an unthrottled public insert pollutes the
+real table, and the marketing page is the most discoverable surface the product has.
+
+**How to apply:** put new public writes behind the same limiter as the existing waitlist
+routes and declare the 429 in the spec. The limiter counts in process memory, which is
+sufficient for one always-on API instance and would have to move to shared storage if the
+API is ever scaled out. Also check that promises in the copy are ones the system can keep —
+an "unsubscribe any time" line needs a suppression path to exist first.

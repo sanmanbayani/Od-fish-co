@@ -82,6 +82,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OkResult"
+        "429":
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
+
+  /waitlist/app:
+    post:
+      operationId: joinAppWaitlist
+      tags: [public]
+      summary: Capture an email address for the mobile app launch announcement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppWaitlistInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResult"
+        "429":
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
 
   # ---------------------------------------------------------------- AUTH
   /auth/otp/request:
@@ -1435,6 +1466,12 @@ components:
       properties:
         pincode: { type: string, minLength: 6, maxLength: 6 }
         phone: { type: string, minLength: 10, maxLength: 10 }
+
+    AppWaitlistInput:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email, minLength: 5, maxLength: 254 }
 
     # ------------------------------------------------------------ CATALOGUE
     Category:

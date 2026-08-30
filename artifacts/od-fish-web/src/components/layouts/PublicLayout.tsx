@@ -25,7 +25,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      <footer className="bg-primary text-primary-foreground py-16 mt-20 relative overflow-hidden">
+      <footer className="bg-primary text-primary-foreground py-16 relative overflow-hidden">
         
         <div className="container mx-auto px-4 md:px-8 grid grid-cols-1 md:grid-cols-4 gap-12 relative z-10">
           <div className="md:col-span-2">
