@@ -10,7 +10,7 @@ import type { StaffInputRole } from './staffInputRole';
 export interface StaffInput {
   /** @minLength 1 */
   email: string;
-  /** @minLength 4 */
+  /** @minLength 6 */
   password: string;
   /** @minLength 1 */
   fullName: string;

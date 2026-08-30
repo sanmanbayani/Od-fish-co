@@ -1888,7 +1888,7 @@ components:
       required: [email, password, fullName, role]
       properties:
         email: { type: string, minLength: 1 }
-        password: { type: string, minLength: 4 }
+        password: { type: string, minLength: 6 }
         fullName: { type: string, minLength: 1 }
         phone: { type: string }
         role: { type: string, enum: [ADMIN, OPS, RIDER] }
@@ -1900,7 +1900,7 @@ components:
         phone: { type: string }
         role: { type: string, enum: [ADMIN, OPS, RIDER] }
         isActive: { type: boolean }
-        password: { type: string, minLength: 4 }
+        password: { type: string, minLength: 6 }
 
     StatusCount:
       type: object

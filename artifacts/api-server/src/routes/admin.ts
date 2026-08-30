@@ -30,7 +30,7 @@ import {
 import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { loadProducts, serializeVariant } from "../lib/catalogue";
-import { badRequest, conflict, notFound, parseBody, unauthorized } from "../lib/http";
+import { badRequest, conflict, forbidden, notFound, parseBody, unauthorized } from "../lib/http";
 import { notifyOrderStatus } from "../lib/push";
 import {
   canTransition,
@@ -922,24 +922,74 @@ router.post("/staff", requireAdmin, async (req, res) => {
   res.status(201).json(serializeStaff(created!));
 });
 
+/**
+ * Editing a staff account can lock the whole team out of the dashboard, and
+ * there is no way back in from the app: switch off the only admin, or demote
+ * yourself by accident, and administration is gone. Both invariants are
+ * enforced here rather than in the browser, because the browser is not the only
+ * thing that can call this.
+ */
 router.patch("/staff/:id", requireAdmin, async (req, res) => {
   const body = parseBody(UpdateStaffBody, req.body);
+  const id = String(req.params.id);
 
-  const [updated] = await db
-    .update(staff)
-    .set({
-      ...(body.fullName === undefined ? {} : { fullName: body.fullName }),
-      ...(body.phone === undefined ? {} : { phone: body.phone }),
-      ...(body.role === undefined ? {} : { role: body.role }),
-      ...(body.isActive === undefined ? {} : { isActive: body.isActive }),
-      ...(body.password === undefined
-        ? {}
-        : { passwordHash: await hashPassword(body.password) }),
-    })
-    .where(eq(staff.id, String(req.params.id)))
-    .returning();
+  const updated = await db.transaction(async (tx) => {
+    // Lock the active admins before reading them, always in the same order.
+    // Two admins switching each other off at the same moment would otherwise
+    // both see "there are two of us" and both succeed, leaving zero.
+    const activeAdmins = await tx
+      .select({ id: staff.id })
+      .from(staff)
+      .where(and(eq(staff.role, "ADMIN"), eq(staff.isActive, true)))
+      .orderBy(asc(staff.id))
+      .for("update");
 
-  if (!updated) throw notFound("That staff account does not exist.");
+    const [current] = await tx
+      .select()
+      .from(staff)
+      .where(eq(staff.id, id))
+      .limit(1)
+      .for("update");
+    if (!current) throw notFound("That staff account does not exist.");
+
+    const beingSwitchedOff = body.isActive === false && current.isActive;
+    const beingMoved = body.role !== undefined && body.role !== current.role;
+
+    if (current.id === req.staff!.id && (beingSwitchedOff || beingMoved)) {
+      throw forbidden(
+        "You cannot change your own role or switch off your own account. Ask another admin to do it.",
+      );
+    }
+
+    const givingUpTheLastAdminSeat =
+      current.role === "ADMIN" &&
+      current.isActive &&
+      (beingSwitchedOff || (beingMoved && body.role !== "ADMIN"));
+
+    if (givingUpTheLastAdminSeat && activeAdmins.length <= 1) {
+      throw conflict(
+        "This is the last active admin. Make someone else an admin first.",
+        "last_admin",
+      );
+    }
+
+    const [row] = await tx
+      .update(staff)
+      .set({
+        ...(body.fullName === undefined ? {} : { fullName: body.fullName }),
+        ...(body.phone === undefined ? {} : { phone: body.phone }),
+        ...(body.role === undefined ? {} : { role: body.role }),
+        ...(body.isActive === undefined ? {} : { isActive: body.isActive }),
+        ...(body.password === undefined
+          ? {}
+          : { passwordHash: await hashPassword(body.password) }),
+      })
+      .where(eq(staff.id, id))
+      .returning();
+
+    return row!;
+  });
+
   res.json(serializeStaff(updated));
 });
 

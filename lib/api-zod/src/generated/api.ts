@@ -1977,7 +1977,7 @@ export const ListStaffResponse = zod.array(ListStaffResponseItem)
 
 
 
-export const createStaffBodyPasswordMin = 4;
+export const createStaffBodyPasswordMin = 6;
 
 
 
@@ -2006,7 +2006,7 @@ export const UpdateStaffParams = zod.object({
 })
 
 
-export const updateStaffBodyPasswordMin = 4;
+export const updateStaffBodyPasswordMin = 6;
 
 
 

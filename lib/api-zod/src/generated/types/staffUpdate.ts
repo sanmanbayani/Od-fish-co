@@ -13,6 +13,6 @@ export interface StaffUpdate {
   phone?: string;
   role?: StaffUpdateRole;
   isActive?: boolean;
-  /** @minLength 4 */
+  /** @minLength 6 */
   password?: string;
 }
