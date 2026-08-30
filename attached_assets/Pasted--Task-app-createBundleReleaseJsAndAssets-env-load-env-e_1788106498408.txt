@@ -1,0 +1,45 @@
+> Task :app:createBundleReleaseJsAndAssets
+env: load .env
+env: export EXPO_PUBLIC_DOMAIN
+React Compiler enabled
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+
+> Task :app:createBundleReleaseJsAndAssets FAILED
+Error: Unable to resolve module ./../../node_modules/.pnpm/expo-ro_a8963d9f475924884ad807606c930713/node_modules/expo-router/entry.js from D:\odf/.: 
+
+None of these files exist:
+  * ..\..\..\node_modules\.pnpm\expo-ro_a8963d9f475924884ad807606c930713\node_modules\expo-router\entry.js(.android.ts|.native.ts|.ts|.android.tsx|.native.tsx|.tsx|.android.mjs|.native.mjs|.mjs|.android.js|.native.js|.js|.android.jsx|.native.jsx|.jsx|.android.json|.native.json|.json|.android.cjs|.native.cjs|.cjs|.android.scss|.native.scss|.scss|.android.sass|.native.sass|.sass|.android.css|.native.css|.css)
+  * ..\..\..\node_modules\.pnpm\expo-ro_a8963d9f475924884ad807606c930713\node_modules\expo-router\entry.js
+Error: Unable to resolve module ./../../node_modules/.pnpm/expo-ro_a8963d9f475924884ad807606c930713/node_modules/expo-router/entry.js from D:\odf/.: 
+
+None of these files exist:
+  * ..\..\..\node_modules\.pnpm\expo-ro_a8963d9f475924884ad807606c930713\node_modules\expo-router\entry.js(.android.ts|.native.ts|.ts|.android.tsx|.native.tsx|.tsx|.android.mjs|.native.mjs|.mjs|.android.js|.native.js|.js|.android.jsx|.native.jsx|.jsx|.android.json|.native.json|.json|.android.cjs|.native.cjs|.cjs|.android.scss|.native.scss|.scss|.android.sass|.native.sass|.sass|.android.css|.native.css|.css)
+  * ..\..\..\node_modules\.pnpm\expo-ro_a8963d9f475924884ad807606c930713\node_modules\expo-router\entry.js
+    at ModuleResolver.resolveDependency (D:\odf\node_modules\.pnpm\metro@0.83.3\node_modules\metro\src\node-haste\DependencyGraph\ModuleResolution.js:136:15)
+    at DependencyGraph.resolveDependency (D:\odf\node_modules\.pnpm\metro@0.83.3\node_modules\metro\src\node-haste\DependencyGraph.js:252:43)
+    at D:\odf\node_modules\.pnpm\metro@0.83.3\node_modules\metro\src\lib\transformHelpers.js:163:21
+    at Server._resolveRelativePath (D:\odf\node_modules\.pnpm\metro@0.83.3\node_modules\metro\src\Server.js:1259:12)
+    at MetroBundlerDevServer.resolveRelativePathAsync (D:\odf\node_modules\.pnpm\@expo+c_843f788122ac3582212d12b42b61c9c2\node_modules\@expo\cli\src\start\server\metro\MetroBundlerDevServer.ts:1875:12)
+    at MetroBundlerDevServer.metroLoadModuleContents (D:\odf\node_modules\.pnpm\@expo+c_843f788122ac3582212d12b42b61c9c2\node_modules\@expo\cli\src\start\server\metro\MetroBundlerDevServer.ts:631:35)
+    at MetroBundlerDevServer.legacySinglePageExportBundleAsync (D:\odf\node_modules\.pnpm\@expo+c_843f788122ac3582212d12b42b61c9c2\node_modules\@expo\cli\src\start\server\metro\MetroBundlerDevServer.ts:958:20)
+    at exportEmbedBundleAndAssetsAsync (D:\odf\node_modules\.pnpm\@expo+c_843f788122ac3582212d12b42b61c9c2\node_modules\@expo\cli\src\export\embed\exportEmbedAsync.ts:196:21)
+    at exportEmbedInternalAsync (D:\odf\node_modules\.pnpm\@expo+c_843f788122ac3582212d12b42b61c9c2\node_modules\@expo\cli\src\export\embed\exportEmbedAsync.ts:128:37)
+    at exportEmbedAsync (D:\odf\node_modules\.pnpm\@expo+c_843f788122ac3582212d12b42b61c9c2\node_modules\@expo\cli\src\export\embed\exportEmbedAsync.ts:108:3)
+
+Execution failed for task ':app:createBundleReleaseJsAndAssets'.
+> Process 'command 'cmd'' finished with non-zero exit value 1
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+Explain with AI
+
