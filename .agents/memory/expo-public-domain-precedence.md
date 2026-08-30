@@ -33,6 +33,13 @@ temporarily remove the explicit domain so the app falls back to the workspace AP
 database, same code — then restore it and restart the expo workflow when done. Do not add
 dev origins to the production allowlist for this.
 
+The explicit value can also arrive as a *workspace shared env var* (set through the env pane),
+not just a shell export — the dev script's `${EXPO_PUBLIC_DOMAIN:-$REPLIT_DEV_DOMAIN}` default
+never fires while it exists. Symptom: the web preview hangs on its loading skeleton and the
+local API log shows *zero* incoming requests (the browser is talking to the production host and
+CORS eats the response client-side). Fix: delete the shared var and restart the expo workflow;
+builds made on the user's own machine keep their own `.env`, so they are unaffected.
+
 # Verifying an EXPO_PUBLIC_* change actually took effect
 
 Restarting Metro is not proof. These variables are inlined into the bundle at transform time

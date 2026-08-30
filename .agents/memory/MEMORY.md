@@ -10,3 +10,4 @@
 - [Ambient vs explicit API host](expo-public-domain-precedence.md) — Replit's domain vars are set everywhere, so a fallback chain silently ignores the host you meant to use.
 - [Tailwind v4 animation trap](tailwind-v4-animation-traps.md) — shadcn's stock slide-in classes fly a centred dialog in from the screen corner; translate no longer folds into transform.
 - [Expo surface conventions](mobile-surface-conventions.md) — sticky footers must ride the keyboard, and the failure-state rules every consumer screen is held to.
+- [Brand asset pipeline](brand-asset-pipeline.md) — where the traced logo and illustration sources live, and why regeneration uses local potrace, not the vectorization API.

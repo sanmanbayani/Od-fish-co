@@ -72,8 +72,12 @@ function onAppStateChange(status: AppStateStatus) {
  * while the app is running, and a tap that launched the app from cold. It keeps
  * returning the same response, so the identifier is remembered to avoid pushing
  * the same screen twice.
+ *
+ * Rendered as a component, not called as a hook, so it can be mounted on
+ * iOS/Android only: the notifications native module does not exist on web and
+ * the hook throws there before first paint.
  */
-function useNotificationRouting() {
+function NotificationRouting() {
   const response = Notifications.useLastNotificationResponse();
   const handledRef = React.useRef<string | null>(null);
 
@@ -87,13 +91,15 @@ function useNotificationRouting() {
 
     router.push(`/order/${orderId}`);
   }, [response]);
+
+  return null;
 }
 
 function RootLayoutNav() {
-  useNotificationRouting();
-
   return (
-    <Stack
+    <>
+      {Platform.OS !== 'web' ? <NotificationRouting /> : null}
+      <Stack
       screenOptions={{
         headerBackTitle: 'Back',
         headerShadowVisible: false,
@@ -117,7 +123,8 @@ function RootLayoutNav() {
         name="address-form"
         options={{ presentation: 'modal', title: 'Address' }}
       />
-    </Stack>
+      </Stack>
+    </>
   );
 }
 

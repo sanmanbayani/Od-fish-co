@@ -56,6 +56,11 @@ Notifications.setNotificationHandler({
  * build.
  */
 function pushUnavailableReason(): string | null {
+  if (Platform.OS === 'web') {
+    // Device.isDevice is true in a browser, so this must be checked first —
+    // the web build has no push token to issue.
+    return 'Push notifications are not supported in the web preview.';
+  }
   if (isRunningInExpoGo()) {
     return 'Expo Go cannot receive push notifications — install a real build to test them.';
   }

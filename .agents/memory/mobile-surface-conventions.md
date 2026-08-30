@@ -53,6 +53,13 @@ loop, and a notification that "does not arrive" there proves nothing.
 tickets, the send call — for a failure that is really "this build cannot receive
 push at all".
 
+Two web-preview corollaries. First, notification *hooks*
+(`useLastNotificationResponse` etc.) crash the Expo web bundle before first
+paint — they cannot merely be called conditionally; mount them via a
+null-returning component that is only rendered when `Platform.OS !== 'web'`.
+Second, in any capability check the web test must come *before*
+`Device.isDevice`, because browsers report `isDevice: true`.
+
 **How to apply:** guard registration on both conditions (running in Expo Go, and
 a missing project id) and log a plain reason rather than throwing, so the
 storefront still works. Verify the server half without a handset: seed a

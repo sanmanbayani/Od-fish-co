@@ -1,7 +1,23 @@
 ---
-name: Tailwind v4 + tw-animate-css centring trap
-description: Why shadcn's stock slide-in classes fly a centred dialog in from the screen corner under Tailwind v4.
+name: Tailwind v4 animation traps
+description: The centring trap in shadcn's slide-in classes, and the faux --keyframes-* syntax that silently kills custom animations.
 ---
+
+# Custom keyframes must be real `@keyframes` blocks
+
+Rule: inside `@theme`, a custom animation needs two things — an `--animate-<name>` token *and* a
+genuine `@keyframes <name> { ... }` block (v4 hoists keyframes declared inside `@theme` into the
+output whenever the token is used). Writing the frames as a custom property, e.g.
+`--keyframes-drift: { ... }`, is not a syntax error: the build passes, the `animate-drift` utility
+is emitted, and the element simply never moves because no `@keyframes drift` exists anywhere.
+
+**Why:** it fails completely silently — plausible-looking CSS, green build, static page. A code
+review caught it here; a visual check cannot (static screenshots look identical either way).
+
+**How to apply:** after adding any custom animation, grep the *built* CSS for the
+`@keyframes <name>` rule. Related composition fact: v4's `scale-*`/`translate-*`/`rotate-*`
+utilities set standalone properties, so they compose with a keyframe that animates `transform` —
+an element can keep `scale-125` while a keyframe drives `translateY`/`rotate`.
 
 # Centred overlays must not use the half-width slide classes
 

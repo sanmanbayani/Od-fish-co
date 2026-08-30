@@ -9,18 +9,21 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
+  getListAddressesQueryKey,
   useCheckServiceability,
   useGetHomeFeed,
   useJoinWaitlist,
+  useListAddresses,
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { mint, overlay, radii, spacing } from '@/constants/colors';
 import { apiErrorMessage, countdown, deliveryDate } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
-import { BrandMark } from '@/components/BrandMark';
+import { LogoGlyph } from '@/components/BrandMark';
 import { CartBar } from '@/components/CartBar';
 import { CategoryTile } from '@/components/CategoryTile';
 import { ProductCard } from '@/components/ProductCard';
@@ -31,6 +34,9 @@ import { TextField } from '@/components/ui/TextField';
 import { LoadingView, ErrorView } from '@/components/ui/StateViews';
 import { CATALOGUE_POLL_MS } from '@/constants/query';
 import { Screen, TAB_BAR_CLEARANCE } from '@/components/ui/Screen';
+
+const BOAT_ART = require('../../assets/images/boat-scene.png');
+const FISH_ART = require('../../assets/images/fish-catch.png');
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -50,6 +56,25 @@ export default function HomeScreen() {
     query: { queryKey: ['serviceability', checked], enabled: Boolean(checked) },
   });
   const joinWaitlist = useJoinWaitlist();
+
+  // Deliver-to chip: the customer's default address, their first one, or a
+  // sign-in / add-address prompt. On failure we fall back to the city name —
+  // the chip is navigation, not a data claim; errors surface on the
+  // addresses screen itself.
+  const addresses = useListAddresses({
+    query: { enabled: Boolean(customer), queryKey: getListAddressesQueryKey() },
+  });
+  const deliverTo = addresses.data?.find((a) => a.isDefault) ?? addresses.data?.[0];
+  const locationLabel = !customer
+    ? 'Set your location'
+    : addresses.isLoading
+      ? 'Finding your address…'
+      : deliverTo
+        ? deliverTo.area
+        : addresses.isError
+          ? 'Mumbai'
+          : 'Add delivery address';
+  const initial = customer?.fullName?.trim()?.[0]?.toUpperCase() ?? null;
 
   const onRefresh = useCallback(() => {
     feed.refetch();
@@ -95,7 +120,55 @@ export default function HomeScreen() {
           ]}
         >
           <View style={styles.headerRow}>
-            <BrandMark size={40} tone="inverse" />
+            <Pressable
+              onPress={() => router.push(customer ? '/addresses' : '/login')}
+              hitSlop={6}
+              style={styles.locationChip}
+            >
+              <View style={styles.pinBubble}>
+                <Feather name="map-pin" size={15} color={mint} />
+              </View>
+              <View style={styles.locationStack}>
+                <Text variant="tiny" uppercase style={styles.locationKicker}>
+                  Deliver to
+                </Text>
+                <View style={styles.locationRow}>
+                  <Text
+                    variant="smallMedium"
+                    tone="inverse"
+                    numberOfLines={1}
+                    style={styles.locationName}
+                  >
+                    {locationLabel}
+                  </Text>
+                  <Feather
+                    name="chevron-down"
+                    size={14}
+                    color={overlay.mutedForeground}
+                  />
+                </View>
+              </View>
+            </Pressable>
+            <Pressable
+              onPress={() => router.push('/(tabs)/account')}
+              hitSlop={6}
+              style={[
+                styles.profileBtn,
+                { borderColor: overlay.hairline, backgroundColor: overlay.fill },
+              ]}
+            >
+              {initial ? (
+                <Text variant="smallMedium" tone="inverse">
+                  {initial}
+                </Text>
+              ) : (
+                <Feather name="user" size={17} color={colors.deepForeground} />
+              )}
+            </Pressable>
+          </View>
+
+          <View style={styles.brandRow}>
+            <LogoGlyph width={46} color={colors.deepForeground} />
             <Badge
               label={data.storeOpen ? 'Counter open' : 'Counter closed'}
               tone={data.storeOpen ? 'success' : 'neutral'}
@@ -103,10 +176,20 @@ export default function HomeScreen() {
           </View>
 
           <Text variant="hero" tone="inverse" style={styles.headline}>
-            {customer?.fullName
-              ? `Fresh today,\n${customer.fullName.split(' ')[0]}.`
-              : 'Off the boat,\non your plate.'}
+            Off the boat,{'\n'}on your plate.
           </Text>
+          <Text variant="small" style={styles.subline}>
+            {customer?.fullName
+              ? `Fresh from Sassoon Dock this morning, ${customer.fullName.split(' ')[0]} — cleaned and cut to order.`
+              : 'Sassoon Dock’s morning catch, cleaned and cut to order for Mumbai kitchens.'}
+          </Text>
+
+          <Image
+            source={BOAT_ART}
+            style={styles.heroArt}
+            contentFit="contain"
+            transition={200}
+          />
 
           {slot ? (
             <Pressable
@@ -150,9 +233,17 @@ export default function HomeScreen() {
               },
             ]}
           >
-            <Text variant="label" tone="muted" uppercase>
-              Do we deliver to you?
-            </Text>
+            <View style={styles.pinHead}>
+              <View style={styles.flex}>
+                <Text variant="label" tone="muted" uppercase>
+                  Do we deliver to you?
+                </Text>
+                <Text variant="small" tone="muted" style={styles.pinCaption}>
+                  Mumbai pincodes, same-day slots.
+                </Text>
+              </View>
+              <Image source={FISH_ART} style={styles.pinArt} contentFit="contain" />
+            </View>
             <View style={styles.pinRow}>
               <TextField
                 placeholder="Mumbai pincode"
@@ -384,13 +475,48 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
   },
-  headline: { marginTop: spacing.lg },
+  locationChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  pinBubble: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: overlay.fill,
+  },
+  locationStack: { flexShrink: 1 },
+  locationKicker: { color: overlay.mutedForeground, letterSpacing: 1 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  locationName: { flexShrink: 1 },
+  profileBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.xl,
+  },
+  headline: { marginTop: spacing.md },
+  subline: { color: overlay.mutedForeground, marginTop: 6, lineHeight: 19 },
+  heroArt: { width: '100%', height: 168, marginTop: spacing.sm },
   slotStrip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderWidth: StyleSheet.hairlineWidth,
@@ -403,6 +529,9 @@ const styles = StyleSheet.create({
   seeAll: { flexDirection: 'row', alignItems: 'center', gap: 1 },
   caption: { marginTop: 2 },
   pinCard: { padding: spacing.lg, borderWidth: StyleSheet.hairlineWidth },
+  pinHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  pinCaption: { marginTop: 2 },
+  pinArt: { width: 86, height: 86, marginVertical: -6 },
   pinRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 10 },
   pinBtn: { marginTop: 0 },
   pinResult: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 12 },
