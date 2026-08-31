@@ -7,6 +7,7 @@
 - [Auth transport per surface](expo-auth-transport.md) — cookies on web, bearer tokens on mobile; a deliberate split, not an inconsistency.
 - [Hosting topology decisions](cross-origin-deployment.md) — why the API must be always-on, and why both surfaces need one registrable domain.
 - [Parallelising web work](web-surface-conventions.md) — the shared router is the one file every frontend feature touches; stub routes before dispatching agents.
+- [Web console on phones](web-mobile-conventions.md) — staff work on phones; the dual-branch parity rule and the four traps that silently defeat a mobile pass.
 - [Ambient vs explicit API host](expo-public-domain-precedence.md) — Replit's domain vars are set everywhere, so a fallback chain silently ignores the host you meant to use.
 - [Tailwind v4 animation trap](tailwind-v4-animation-traps.md) — shadcn's stock slide-in classes fly a centred dialog in from the screen corner; translate no longer folds into transform.
 - [Expo surface conventions](mobile-surface-conventions.md) — sticky footers must ride the keyboard, and the failure-state rules every consumer screen is held to.

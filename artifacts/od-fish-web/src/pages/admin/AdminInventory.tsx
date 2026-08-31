@@ -9,6 +9,7 @@ import { Search, Save, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiErrorMessage } from "@/lib/api-error";
 import { useQueryClient } from "@tanstack/react-query";
+import { DataList, DataListItem, DataListField, DataState } from "@/components/data-list";
 
 export default function AdminInventory() {
   const { data: inventory, isLoading, error } = useListInventory();
@@ -75,7 +76,7 @@ export default function AdminInventory() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-serif font-bold text-foreground">Inventory</h1>
           <p className="text-muted-foreground mt-1">Manage stock levels and daily pricing</p>
@@ -84,7 +85,7 @@ export default function AdminInventory() {
           <Button 
             onClick={handleSave} 
             disabled={!hasChanges || updateInventory.isPending}
-            className={hasChanges ? "bg-green-600 hover:bg-green-700" : ""}
+            className={`w-full sm:w-auto min-h-11 sm:min-h-9 ${hasChanges ? "bg-green-600 hover:bg-green-700" : ""}`}
           >
             <Save className="w-4 h-4 mr-2" />
             Save Changes {hasChanges && `(${Object.keys(edits).length})`}
@@ -93,11 +94,11 @@ export default function AdminInventory() {
       </div>
 
       <div className="bg-card p-4 rounded-xl border shadow-sm">
-        <div className="relative max-w-md">
+        <div className="relative w-full sm:max-w-md">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input 
             placeholder="Search products, SKUs..." 
-            className="pl-9 bg-background"
+            className="pl-9 bg-background text-base sm:text-sm h-11 sm:h-9"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -106,24 +107,78 @@ export default function AdminInventory() {
 
       <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
         {isLoading ? (
-          <div className="p-12 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
+          <DataState><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></DataState>
         ) : error ? (
-          <div className="p-12 text-center text-destructive flex flex-col items-center">
+          <DataState className="text-destructive flex flex-col items-center">
             <AlertCircle className="w-8 h-8 mb-2" />
             <p>Failed to load inventory.</p>
-          </div>
+          </DataState>
+        ) : filteredInventory.length === 0 ? (
+          <DataState>No inventory items found.</DataState>
         ) : (
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead>SKU / Cut</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Price (Paise)</TableHead>
-                <TableHead>Stock Qty</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader className="bg-muted/50">
+                  <TableRow>
+                    <TableHead>Product</TableHead>
+                    <TableHead>SKU / Cut</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Price (Paise)</TableHead>
+                    <TableHead>Stock Qty</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredInventory.map((item) => {
+                    const currentEdit = edits[item.variantId];
+                    const displayPrice = currentEdit?.pricePaise ?? item.pricePaise;
+                    const displayQty = currentEdit?.stockQty ?? item.stockQty;
+                    const isEdited = !!currentEdit;
+
+                    return (
+                      <TableRow key={item.variantId} className={isEdited ? "bg-primary/5" : ""}>
+                        <TableCell>
+                          <div className="font-medium">{item.productName}</div>
+                          <div className="text-xs text-muted-foreground">{item.categoryName}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-mono text-xs mb-1">{item.sku}</div>
+                          <div className="text-sm">{item.cutType} • {item.packLabel}</div>
+                        </TableCell>
+                        <TableCell>
+                          {getStockBadge(item.stockState, item.stockQty)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 max-w-[150px]">
+                            <Input 
+                              type="number" 
+                              value={displayPrice}
+                              onChange={(e) => handleEdit(item.variantId, 'pricePaise', e.target.value)}
+                              className={`h-9 font-mono text-right text-sm ${isEdited && currentEdit.pricePaise !== undefined ? 'border-primary' : ''}`}
+                            />
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                              ({formatPaise(displayPrice)})
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="max-w-[100px]">
+                            <Input 
+                              type="number" 
+                              value={displayQty}
+                              onChange={(e) => handleEdit(item.variantId, 'stockQty', e.target.value)}
+                              className={`h-9 font-mono text-right text-sm ${isEdited && currentEdit.stockQty !== undefined ? 'border-primary' : ''}`}
+                            />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+            
+            <DataList>
               {filteredInventory.map((item) => {
                 const currentEdit = edits[item.variantId];
                 const displayPrice = currentEdit?.pricePaise ?? item.pricePaise;
@@ -131,46 +186,41 @@ export default function AdminInventory() {
                 const isEdited = !!currentEdit;
 
                 return (
-                  <TableRow key={item.variantId} className={isEdited ? "bg-primary/5" : ""}>
-                    <TableCell>
-                      <div className="font-medium">{item.productName}</div>
-                      <div className="text-xs text-muted-foreground">{item.categoryName}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-mono text-xs mb-1">{item.sku}</div>
-                      <div className="text-sm">{item.cutType} • {item.packLabel}</div>
-                    </TableCell>
-                    <TableCell>
-                      {getStockBadge(item.stockState, item.stockQty)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2 max-w-[150px]">
-                        <Input 
-                          type="number" 
-                          value={displayPrice}
-                          onChange={(e) => handleEdit(item.variantId, 'pricePaise', e.target.value)}
-                          className={`h-9 font-mono text-right ${isEdited && currentEdit.pricePaise !== undefined ? 'border-primary' : ''}`}
-                        />
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          ({formatPaise(displayPrice)})
-                        </span>
+                  <DataListItem
+                    key={item.variantId}
+                    title={item.productName}
+                    subtitle={<>{item.sku} &bull; {item.cutType} &bull; {item.packLabel}</>}
+                    trailing={getStockBadge(item.stockState, item.stockQty)}
+                    className={isEdited ? "bg-primary/5" : ""}
+                  >
+                    <div className="grid grid-cols-2 gap-4 mt-3">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block">Price (Paise)</label>
+                        <div className="relative">
+                          <Input 
+                            type="number" 
+                            value={displayPrice}
+                            onChange={(e) => handleEdit(item.variantId, 'pricePaise', e.target.value)}
+                            className={`h-11 font-mono text-base ${isEdited && currentEdit.pricePaise !== undefined ? 'border-primary ring-1 ring-primary/20' : ''}`}
+                          />
+                        </div>
+                        <div className="text-xs text-muted-foreground text-right">{formatPaise(displayPrice)}</div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="max-w-[100px]">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block">Stock Qty</label>
                         <Input 
                           type="number" 
                           value={displayQty}
                           onChange={(e) => handleEdit(item.variantId, 'stockQty', e.target.value)}
-                          className={`h-9 font-mono text-right ${isEdited && currentEdit.stockQty !== undefined ? 'border-primary' : ''}`}
+                          className={`h-11 font-mono text-base ${isEdited && currentEdit.stockQty !== undefined ? 'border-primary ring-1 ring-primary/20' : ''}`}
                         />
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                  </DataListItem>
                 );
               })}
-            </TableBody>
-          </Table>
+            </DataList>
+          </>
         )}
       </div>
     </div>

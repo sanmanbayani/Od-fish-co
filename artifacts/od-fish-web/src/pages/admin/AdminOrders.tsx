@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter, AlertCircle } from "lucide-react";
+import { DataList, DataListItem, DataListField, DataState } from "@/components/data-list";
 
 export default function AdminOrders() {
   const [status, setStatus] = useState<string>("ALL");
@@ -53,15 +54,15 @@ export default function AdminOrders() {
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input 
             placeholder="Search order #, customer, phone..." 
-            className="pl-9 bg-background"
+            className="pl-9 bg-background text-base md:text-sm h-11 md:h-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <Filter className="w-4 h-4 text-muted-foreground" />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+          <Filter className="w-4 h-4 text-muted-foreground hidden sm:block" />
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-full md:w-48 bg-background">
+            <SelectTrigger className="w-full sm:w-48 bg-background text-base md:text-sm h-11 md:h-10">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -80,63 +81,99 @@ export default function AdminOrders() {
 
       <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
         {isLoading ? (
-          <div className="p-12 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
+          <DataState>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </DataState>
         ) : error ? (
-          <div className="p-12 text-center text-destructive flex flex-col items-center">
+          <DataState className="text-destructive">
             <AlertCircle className="w-8 h-8 mb-2" />
             <p>Failed to load orders.</p>
-          </div>
+          </DataState>
         ) : !orders || orders.length === 0 ? (
-          <div className="p-12 text-center text-muted-foreground">
+          <DataState>
             <p>No orders found matching your criteria.</p>
-          </div>
+          </DataState>
         ) : (
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead>Order #</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Delivery Slot</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader className="bg-muted/50">
+                  <TableRow>
+                    <TableHead>Order #</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Delivery Slot</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Payment</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orders.map((order) => (
+                    <TableRow key={order.id} className="hover:bg-muted/50 cursor-pointer transition-colors">
+                      <TableCell className="font-mono font-medium">
+                        <Link href={`/admin/orders/${order.id}`} className="text-primary hover:underline">
+                          {order.orderNumber}
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">{order.customerName}</div>
+                        <div className="text-xs text-muted-foreground">{order.customerPhone}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">{slotWindow(order.slotLabel)}</div>
+                        <div className="text-xs text-muted-foreground">{formatOnlyDate(order.deliveryDate)}</div>
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(order.status)}
+                        {order.flaggedUnreachable && (
+                          <Badge variant="destructive" className="ml-2 text-[10px]">Unreachable</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">{order.paymentMethod}</div>
+                        <div className={`text-xs ${order.paymentStatus === 'PAID' ? 'text-green-600' : 'text-muted-foreground'}`}>
+                          {order.paymentStatus}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-bold">
+                        {formatPaise(order.totalPaise)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <DataList>
               {orders.map((order) => (
-                <TableRow key={order.id} className="hover:bg-muted/50 cursor-pointer transition-colors">
-                  <TableCell className="font-mono font-medium">
-                    <Link href={`/admin/orders/${order.id}`} className="text-primary hover:underline">
-                      {order.orderNumber}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium">{order.customerName}</div>
-                    <div className="text-xs text-muted-foreground">{order.customerPhone}</div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">{slotWindow(order.slotLabel)}</div>
-                    <div className="text-xs text-muted-foreground">{formatOnlyDate(order.deliveryDate)}</div>
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge(order.status)}
-                    {order.flaggedUnreachable && (
-                      <Badge variant="destructive" className="ml-2 text-[10px]">Unreachable</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">{order.paymentMethod}</div>
-                    <div className={`text-xs ${order.paymentStatus === 'PAID' ? 'text-green-600' : 'text-muted-foreground'}`}>
+                <DataListItem
+                  key={order.id}
+                  href={`/admin/orders/${order.id}`}
+                  title={order.orderNumber}
+                  subtitle={`${order.customerName} • ${order.customerPhone}`}
+                  trailing={
+                    <>
+                      <div className="font-bold">{formatPaise(order.totalPaise)}</div>
+                      {getStatusBadge(order.status)}
+                      {order.flaggedUnreachable && (
+                        <Badge variant="destructive" className="mt-1 text-[10px]">Unreachable</Badge>
+                      )}
+                    </>
+                  }
+                >
+                  <DataListField label="Delivery Slot">
+                    <div>{slotWindow(order.slotLabel)}</div>
+                    <div className="text-xs text-muted-foreground font-normal">{formatOnlyDate(order.deliveryDate)}</div>
+                  </DataListField>
+                  <DataListField label="Payment">
+                    <div>{order.paymentMethod}</div>
+                    <div className={`text-xs ${order.paymentStatus === 'PAID' ? 'text-green-600 font-medium' : 'text-muted-foreground font-normal'}`}>
                       {order.paymentStatus}
                     </div>
-                  </TableCell>
-                  <TableCell className="text-right font-bold">
-                    {formatPaise(order.totalPaise)}
-                  </TableCell>
-                </TableRow>
+                  </DataListField>
+                </DataListItem>
               ))}
-            </TableBody>
-          </Table>
+            </DataList>
+          </>
         )}
       </div>
     </div>

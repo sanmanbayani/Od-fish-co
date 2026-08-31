@@ -22,6 +22,7 @@ import { ArrowLeft, Clock, MapPin, Phone, User, Package, FileText, CheckCircle2 
 import { useToast } from "@/hooks/use-toast";
 import { apiErrorCode, apiErrorMessage } from "@/lib/api-error";
 import { mediaUrl } from "@/lib/api-config";
+import { DataList, DataListItem, DataListField } from "@/components/data-list";
 
 export default function AdminOrderDetails() {
   const { id } = useParams<{ id: string }>();
@@ -97,7 +98,7 @@ export default function AdminOrderDetails() {
   return (
     <div className="space-y-6 max-w-5xl animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" asChild>
+        <Button variant="outline" size="icon" className="shrink-0 min-h-[44px] min-w-[44px] sm:min-h-9 sm:min-w-[36px]" asChild>
           <Link href="/admin/orders"><ArrowLeft className="w-4 h-4" /></Link>
         </Button>
         <div>
@@ -111,7 +112,7 @@ export default function AdminOrderDetails() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6 order-2 lg:order-1">
           {/* Items */}
           <Card>
             <CardHeader className="pb-3 border-b">
@@ -120,39 +121,71 @@ export default function AdminOrderDetails() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 border-b text-muted-foreground">
-                  <tr>
-                    <th className="text-left font-medium p-4">Item</th>
-                    <th className="text-center font-medium p-4">Qty</th>
-                    <th className="text-right font-medium p-4">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {order.items.map((item) => (
-                    <tr key={item.id} className="hover:bg-muted/30">
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          {item.imageUrl ? (
-                            <img src={mediaUrl(item.imageUrl)} alt={item.productName} className="w-12 h-12 rounded object-cover" />
-                          ) : (
-                            <div className="w-12 h-12 rounded bg-muted flex items-center justify-center">
-                              <Package className="w-6 h-6 text-muted-foreground/30" />
-                            </div>
-                          )}
-                          <div>
-                            <div className="font-bold text-base">{item.productName}</div>
-                            <div className="text-xs text-muted-foreground mb-1">{item.cutType} • {item.packLabel}</div>
-                            {item.grossWeightG && <div className="text-xs font-medium bg-primary/10 text-primary px-1.5 py-0.5 rounded w-fit">Gross: {formatWeight(item.grossWeightG)}</div>}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4 text-center font-medium">{item.quantity} x {formatPaise(item.unitPricePaise)}</td>
-                      <td className="p-4 text-right font-bold">{formatPaise(item.lineTotalPaise)}</td>
+              <div className="hidden md:block">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 border-b text-muted-foreground">
+                    <tr>
+                      <th className="text-left font-medium p-4">Item</th>
+                      <th className="text-center font-medium p-4">Qty</th>
+                      <th className="text-right font-medium p-4">Total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y">
+                    {order.items.map((item) => (
+                      <tr key={item.id} className="hover:bg-muted/30">
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            {item.imageUrl ? (
+                              <img src={mediaUrl(item.imageUrl)} alt={item.productName} className="w-12 h-12 rounded object-cover" />
+                            ) : (
+                              <div className="w-12 h-12 rounded bg-muted flex items-center justify-center">
+                                <Package className="w-6 h-6 text-muted-foreground/30" />
+                              </div>
+                            )}
+                            <div>
+                              <div className="font-bold text-base">{item.productName}</div>
+                              <div className="text-xs text-muted-foreground mb-1">{item.cutType} • {item.packLabel}</div>
+                              {item.grossWeightG && <div className="text-xs font-medium bg-primary/10 text-primary px-1.5 py-0.5 rounded w-fit">Gross: {formatWeight(item.grossWeightG)}</div>}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4 text-center font-medium">{item.quantity} x {formatPaise(item.unitPricePaise)}</td>
+                        <td className="p-4 text-right font-bold">{formatPaise(item.lineTotalPaise)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <DataList>
+                {order.items.map((item) => (
+                  <DataListItem
+                    key={item.id}
+                    title={
+                      <div className="flex items-center gap-3">
+                        {item.imageUrl ? (
+                          <img src={mediaUrl(item.imageUrl)} alt={item.productName} className="w-10 h-10 rounded object-cover shrink-0" />
+                        ) : (
+                          <div className="w-10 h-10 rounded bg-muted flex items-center justify-center shrink-0">
+                            <Package className="w-5 h-5 text-muted-foreground/30" />
+                          </div>
+                        )}
+                        <div>{item.productName}</div>
+                      </div>
+                    }
+                    subtitle={
+                      <div className="ml-13">
+                        {item.cutType} • {item.packLabel}
+                        {item.grossWeightG && <div className="mt-1 text-xs font-medium bg-primary/10 text-primary px-1.5 py-0.5 rounded w-fit">Gross: {formatWeight(item.grossWeightG)}</div>}
+                      </div>
+                    }
+                    trailing={<div className="font-bold">{formatPaise(item.lineTotalPaise)}</div>}
+                  >
+                    <DataListField label="Quantity">
+                      {item.quantity} x {formatPaise(item.unitPricePaise)}
+                    </DataListField>
+                  </DataListItem>
+                ))}
+              </DataList>
               <div className="p-4 bg-muted/30 flex flex-col gap-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
@@ -212,7 +245,7 @@ export default function AdminOrderDetails() {
           </Card>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 order-1 lg:order-2">
           {/* Actions */}
           <Card className="border-primary/20 shadow-md">
             <CardHeader className="bg-primary/5 pb-4">
@@ -232,7 +265,7 @@ export default function AdminOrderDetails() {
                           <Button
                             onClick={() => (status === 'DELIVERED' ? setDeskClose(true) : handleStatusChange(status))}
                             variant={status === 'CANCELLED' ? 'destructive' : 'default'}
-                            className="w-full justify-start"
+                            className="w-full justify-start min-h-[44px] sm:min-h-0"
                             disabled={updateStatus.isPending || blocked}
                             data-testid={`button-status-${status}`}
                           >
@@ -271,6 +304,7 @@ export default function AdminOrderDetails() {
                         onChange={(e) => setOverrideReason(e.target.value)}
                         placeholder="Rider&apos;s phone battery died"
                         data-testid="input-override-reason"
+                        className="text-base sm:text-sm h-11 sm:h-10"
                       />
                     </div>
                     {needsCash && (
@@ -287,9 +321,10 @@ export default function AdminOrderDetails() {
                       </label>
                     )}
                   </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setDeskClose(false)}>Back</Button>
+                  <DialogFooter className="gap-2 sm:gap-0 mt-4">
+                    <Button variant="outline" onClick={() => setDeskClose(false)} className="w-full sm:w-auto min-h-[44px] sm:min-h-0">Back</Button>
                     <Button
+                      className="w-full sm:w-auto min-h-[44px] sm:min-h-0"
                       disabled={overrideReason.trim().length < 5 || updateStatus.isPending}
                       onClick={() => handleStatusChange("DELIVERED", { overrideReason: overrideReason.trim(), cashCollected: cashIn })}
                       data-testid="button-confirm-desk-close"
@@ -309,7 +344,7 @@ export default function AdminOrderDetails() {
                     Bank it here once the rider hands the notes over at the counter.
                   </p>
                   <Button
-                    className="w-full"
+                    className="w-full min-h-[44px] sm:min-h-0"
                     disabled={recordCash.isPending}
                     onClick={() =>
                       recordCash.mutate(
@@ -343,7 +378,7 @@ export default function AdminOrderDetails() {
                     onValueChange={handleRiderAssign}
                     disabled={assignRider.isPending}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="text-base sm:text-sm h-11 sm:h-10">
                       <SelectValue placeholder="Select Rider" />
                     </SelectTrigger>
                     <SelectContent>

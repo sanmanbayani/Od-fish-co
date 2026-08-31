@@ -36,6 +36,7 @@ import { Search, Filter, Plus, Image as ImageIcon, Pencil, Trash2 } from "lucide
 import { useToast } from "@/hooks/use-toast";
 import { apiErrorMessage } from "@/lib/api-error";
 import { useQueryClient } from "@tanstack/react-query";
+import { DataList, DataListItem, DataListField, DataState } from "@/components/data-list";
 
 type ProductForm = {
   name: string; nameLocal: string; categoryId: string; shortDesc: string;
@@ -182,58 +183,88 @@ export default function AdminProducts() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div><h1 className="text-3xl font-serif font-bold text-foreground">Products</h1><p className="text-muted-foreground mt-1">Catalogue and packs</p></div>
-        <Button onClick={() => openProduct()}><Plus className="w-4 h-4 mr-2" /> Add Product</Button>
+        <Button onClick={() => openProduct()} className="w-full sm:w-auto min-h-11 sm:min-h-9"><Plus className="w-4 h-4 mr-2" /> Add Product</Button>
       </div>
-      <div className="bg-card p-4 rounded-xl border shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:w-96"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><Input placeholder="Search by name, local name..." className="pl-9 bg-background" value={search} onChange={e => setSearch(e.target.value)} /></div>
-        <div className="flex items-center gap-3 w-full md:w-auto"><Filter className="w-4 h-4 text-muted-foreground" /><Select value={category} onValueChange={setCategory}><SelectTrigger className="w-full md:w-48 bg-background"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ALL">All Categories</SelectItem>{categories?.map(c => <SelectItem key={c.id} value={c.slug}>{c.name}</SelectItem>)}</SelectContent></Select></div>
+      <div className="bg-card p-4 rounded-xl border shadow-sm flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
+        <div className="relative w-full sm:w-96"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><Input placeholder="Search by name, local name..." className="pl-9 bg-background text-base sm:text-sm h-11 sm:h-9" value={search} onChange={e => setSearch(e.target.value)} /></div>
+        <div className="flex items-center gap-3 w-full sm:w-auto"><Filter className="w-4 h-4 text-muted-foreground hidden sm:block shrink-0" /><Select value={category} onValueChange={setCategory}><SelectTrigger className="w-full sm:w-48 bg-background text-base sm:text-sm h-11 sm:h-9"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ALL">All Categories</SelectItem>{categories?.map(c => <SelectItem key={c.id} value={c.slug}>{c.name}</SelectItem>)}</SelectContent></Select></div>
       </div>
       <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
-        {isLoading ? <div className="p-12 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div> : error ? <div className="p-12 text-center text-destructive">Failed to load products.</div> : !filteredProducts.length ? <div className="p-12 text-center text-muted-foreground">No products found.</div> :
-          <Table><TableHeader className="bg-muted/50"><TableRow><TableHead className="w-16" /><TableHead>Product</TableHead><TableHead>Category</TableHead><TableHead>Status</TableHead><TableHead>Packs</TableHead><TableHead className="text-right">Starting At</TableHead><TableHead className="w-12" /></TableRow></TableHeader>
-            <TableBody>{filteredProducts.map(product => <TableRow key={product.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => openProduct(product)}>
-              <TableCell>{product.imageUrls?.[0] ? <img src={mediaUrl(product.imageUrls[0])} alt="" className="w-10 h-10 rounded object-cover" /> : <div className="w-10 h-10 rounded bg-muted flex items-center justify-center"><ImageIcon className="w-4 h-4 text-muted-foreground/50" /></div>}</TableCell>
-              <TableCell><div className="font-bold text-primary">{product.name}</div>{product.nameLocal && <div className="text-xs text-muted-foreground">{product.nameLocal}</div>}</TableCell>
-              <TableCell><Badge variant="secondary" className="font-normal">{product.categoryName}</Badge></TableCell>
-              <TableCell><Badge variant="outline" className={product.isActive ? "bg-green-100 text-green-800 border-green-200" : "bg-muted text-muted-foreground"}>{product.isActive ? "Active" : "Archived"}</Badge></TableCell>
-              <TableCell><div className="text-sm">{product.variants?.length || 0}</div><span className={`text-xs ${product.inStock ? "text-green-600" : "text-destructive"}`}>{product.inStock ? "In Stock" : "Out of Stock"}</span></TableCell>
-              <TableCell className="text-right font-medium">{formatPaise(product.fromPricePaise)}</TableCell><TableCell><Pencil className="w-4 h-4 text-muted-foreground" /></TableCell>
-            </TableRow>)}</TableBody></Table>}
+        {isLoading ? <DataState><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></DataState> : error ? <DataState className="text-destructive">Failed to load products.</DataState> : !filteredProducts.length ? <DataState>No products found.</DataState> : (
+          <>
+            <div className="hidden md:block">
+              <Table><TableHeader className="bg-muted/50"><TableRow><TableHead className="w-16" /><TableHead>Product</TableHead><TableHead>Category</TableHead><TableHead>Status</TableHead><TableHead>Packs</TableHead><TableHead className="text-right">Starting At</TableHead><TableHead className="w-12" /></TableRow></TableHeader>
+                <TableBody>{filteredProducts.map(product => <TableRow key={product.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => openProduct(product)}>
+                  <TableCell>{product.imageUrls?.[0] ? <img src={mediaUrl(product.imageUrls[0])} alt="" className="w-10 h-10 rounded object-cover" /> : <div className="w-10 h-10 rounded bg-muted flex items-center justify-center"><ImageIcon className="w-4 h-4 text-muted-foreground/50" /></div>}</TableCell>
+                  <TableCell><div className="font-bold text-primary">{product.name}</div>{product.nameLocal && <div className="text-xs text-muted-foreground">{product.nameLocal}</div>}</TableCell>
+                  <TableCell><Badge variant="secondary" className="font-normal">{product.categoryName}</Badge></TableCell>
+                  <TableCell><Badge variant="outline" className={product.isActive ? "bg-green-100 text-green-800 border-green-200" : "bg-muted text-muted-foreground"}>{product.isActive ? "Active" : "Archived"}</Badge></TableCell>
+                  <TableCell><div className="text-sm">{product.variants?.length || 0}</div><span className={`text-xs ${product.inStock ? "text-green-600" : "text-destructive"}`}>{product.inStock ? "In Stock" : "Out of Stock"}</span></TableCell>
+                  <TableCell className="text-right font-medium">{formatPaise(product.fromPricePaise)}</TableCell><TableCell><Pencil className="w-4 h-4 text-muted-foreground" /></TableCell>
+                </TableRow>)}</TableBody></Table>
+            </div>
+            <DataList>
+              {filteredProducts.map(product => (
+                <DataListItem
+                  key={product.id}
+                  onClick={() => openProduct(product)}
+                  title={
+                    <div className="flex items-center gap-2">
+                      {product.imageUrls?.[0] ? <img src={mediaUrl(product.imageUrls[0])} alt="" className="w-8 h-8 rounded object-cover" /> : <div className="w-8 h-8 rounded bg-muted flex items-center justify-center shrink-0"><ImageIcon className="w-3 h-3 text-muted-foreground/50" /></div>}
+                      <span>{product.name}</span>
+                    </div>
+                  }
+                  subtitle={product.nameLocal ? `${product.nameLocal} • ${product.categoryName}` : product.categoryName}
+                  trailing={
+                    <Badge variant="outline" className={product.isActive ? "bg-green-100 text-green-800 border-green-200" : "bg-muted text-muted-foreground"}>
+                      {product.isActive ? "Active" : "Archived"}
+                    </Badge>
+                  }
+                >
+                  <DataListField label="Packs">
+                    {product.variants?.length || 0} <span className={product.inStock ? "text-green-600" : "text-destructive"}>({product.inStock ? "In Stock" : "Out"})</span>
+                  </DataListField>
+                  <DataListField label="Starting At">{formatPaise(product.fromPricePaise)}</DataListField>
+                </DataListItem>
+              ))}
+            </DataList>
+          </>
+        )}
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}><DialogContent className="sm:max-w-3xl">
+      <Dialog open={open} onOpenChange={setOpen}><DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-serif text-2xl">{editing ? editing.name : "New product"}</DialogTitle>
+          <DialogTitle className="font-serif text-2xl text-primary">{editing ? editing.name : "New product"}</DialogTitle>
         </DialogHeader>
 
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList>
-            <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="packs" disabled={!editing}>Packs{editing ? ` · ${packs.length}` : ""}</TabsTrigger>
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger className="flex-1 sm:flex-none" value="details">Details</TabsTrigger>
+            <TabsTrigger className="flex-1 sm:flex-none" value="packs" disabled={!editing}>Packs{editing ? ` · ${packs.length}` : ""}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="details" className="space-y-6 pt-5">
             <Section title="Basics">
-              <div className="grid sm:grid-cols-2 gap-4">
-                <Field label="Name"><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></Field>
-                <Field label="Local name"><Input value={form.nameLocal} onChange={e => setForm({ ...form, nameLocal: e.target.value })} placeholder="Bangda" /></Field>
-                <Field label="Category"><Select value={form.categoryId} onValueChange={categoryId => setForm({ ...form, categoryId })}><SelectTrigger><SelectValue placeholder="Choose category" /></SelectTrigger><SelectContent>{categories?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select></Field>
-                <Field label="Origin"><Input value={form.origin} onChange={e => setForm({ ...form, origin: e.target.value })} placeholder="Sassoon Dock" /></Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Name"><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="text-base sm:text-sm" /></Field>
+                <Field label="Local name"><Input value={form.nameLocal} onChange={e => setForm({ ...form, nameLocal: e.target.value })} placeholder="Bangda" className="text-base sm:text-sm" /></Field>
+                <Field label="Category"><Select value={form.categoryId} onValueChange={categoryId => setForm({ ...form, categoryId })}><SelectTrigger className="text-base sm:text-sm"><SelectValue placeholder="Choose category" /></SelectTrigger><SelectContent>{categories?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select></Field>
+                <Field label="Origin"><Input value={form.origin} onChange={e => setForm({ ...form, origin: e.target.value })} placeholder="Sassoon Dock" className="text-base sm:text-sm" /></Field>
               </div>
             </Section>
 
             <Section title="Description">
               <div className="space-y-4">
-                <Field label="Short"><Input value={form.shortDesc} onChange={e => setForm({ ...form, shortDesc: e.target.value })} placeholder="One line on the shop card" /></Field>
-                <Field label="Full"><Textarea rows={3} value={form.longDesc} onChange={e => setForm({ ...form, longDesc: e.target.value })} /></Field>
-                <Field label="Best for"><Input value={form.bestFor} onChange={e => setForm({ ...form, bestFor: e.target.value })} placeholder="Curry, Fry" /></Field>
+                <Field label="Short"><Input value={form.shortDesc} onChange={e => setForm({ ...form, shortDesc: e.target.value })} placeholder="One line on the shop card" className="text-base sm:text-sm" /></Field>
+                <Field label="Full"><Textarea rows={3} value={form.longDesc} onChange={e => setForm({ ...form, longDesc: e.target.value })} className="text-base sm:text-sm" /></Field>
+                <Field label="Best for"><Input value={form.bestFor} onChange={e => setForm({ ...form, bestFor: e.target.value })} placeholder="Curry, Fry" className="text-base sm:text-sm" /></Field>
               </div>
             </Section>
 
             <Section title="Images">
-              <Field label="One URL per line"><Textarea rows={2} value={form.imageUrls} onChange={e => setForm({ ...form, imageUrls: e.target.value })} /></Field>
+              <Field label="One URL per line"><Textarea rows={2} value={form.imageUrls} onChange={e => setForm({ ...form, imageUrls: e.target.value })} className="text-base sm:text-sm" /></Field>
             </Section>
 
             <div className="flex items-center gap-3 border-t pt-4"><Switch checked={form.isActive} onCheckedChange={isActive => setForm({ ...form, isActive })} /><Label>Active in catalogue</Label></div>
@@ -244,7 +275,7 @@ export default function AdminProducts() {
               ? <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">No packs yet.</div>
               : packs.map(v => (
                 <div key={v.id} className="flex items-center gap-1 rounded-lg border pr-2 hover:bg-muted/50">
-                  <button onClick={() => openVariant(v)} className="flex flex-1 items-center justify-between gap-4 p-3 text-left">
+                  <button onClick={() => openVariant(v)} className="flex flex-1 items-center justify-between gap-4 p-3 text-left min-h-11">
                     <div className="min-w-0">
                       <div className="font-medium truncate">{v.packLabel}</div>
                       <div className="text-xs text-muted-foreground truncate">{[v.cutType, packWeights(v)].filter(Boolean).join(" · ")}</div>
@@ -254,31 +285,31 @@ export default function AdminProducts() {
                       <div className={`text-xs ${v.isActive ? "text-muted-foreground" : "text-destructive"}`}>{v.isActive ? `${v.stockQty} in stock` : "Archived"}</div>
                     </div>
                   </button>
-                  <Button variant="ghost" size="icon" aria-label={`Delete ${v.packLabel}`} onClick={() => setDeletingPack(v)}>
+                  <Button variant="ghost" size="icon" className="w-11 h-11 shrink-0" aria-label={`Delete ${v.packLabel}`} onClick={() => setDeletingPack(v)}>
                     <Trash2 className="w-4 h-4 text-muted-foreground" />
                   </Button>
                 </div>
               ))}
-            <Button size="sm" variant="outline" onClick={() => openVariant()}><Plus className="w-4 h-4 mr-1" /> Add pack</Button>
+            <Button size="sm" variant="outline" className="w-full sm:w-auto min-h-11 sm:min-h-9" onClick={() => openVariant()}><Plus className="w-4 h-4 mr-1" /> Add pack</Button>
           </TabsContent>
         </Tabs>
 
-        <DialogFooter><Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button><Button onClick={saveProduct} disabled={pending}>{pending ? "Saving..." : "Save Product"}</Button></DialogFooter>
+        <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0 mt-6"><Button variant="outline" className="w-full sm:w-auto min-h-11 sm:min-h-9" onClick={() => setOpen(false)}>Cancel</Button><Button onClick={saveProduct} className="w-full sm:w-auto min-h-11 sm:min-h-9" disabled={pending}>{pending ? "Saving..." : "Save Product"}</Button></DialogFooter>
       </DialogContent></Dialog>
 
-      <Dialog open={variantOpen} onOpenChange={setVariantOpen}><DialogContent className="sm:max-w-2xl">
-        <DialogHeader><DialogTitle className="font-serif text-2xl">{editingVariant ? editingVariant.packLabel : "New pack"}</DialogTitle></DialogHeader>
-        <div className="space-y-6">
+      <Dialog open={variantOpen} onOpenChange={setVariantOpen}><DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader><DialogTitle className="font-serif text-2xl text-primary">{editingVariant ? editingVariant.packLabel : "New pack"}</DialogTitle></DialogHeader>
+        <div className="space-y-6 mt-4">
           <Section title="Pack">
-            <div className="grid sm:grid-cols-3 gap-4">
-              <Field label="Label"><Input value={variantForm.packLabel} onChange={e => setVariantForm({ ...variantForm, packLabel: e.target.value })} placeholder="500g pack" /></Field>
-              <Field label="Cut type"><Input value={variantForm.cutType} onChange={e => setVariantForm({ ...variantForm, cutType: e.target.value })} placeholder="Curry cut" /></Field>
-              <Field label="Sold by"><Select value={variantForm.soldBy} onValueChange={(soldBy: "PACK" | "PIECE") => setVariantForm({ ...variantForm, soldBy })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="PACK">Pack</SelectItem><SelectItem value="PIECE">Piece</SelectItem></SelectContent></Select></Field>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field label="Label"><Input value={variantForm.packLabel} onChange={e => setVariantForm({ ...variantForm, packLabel: e.target.value })} placeholder="500g pack" className="text-base sm:text-sm" /></Field>
+              <Field label="Cut type"><Input value={variantForm.cutType} onChange={e => setVariantForm({ ...variantForm, cutType: e.target.value })} placeholder="Curry cut" className="text-base sm:text-sm" /></Field>
+              <Field label="Sold by"><Select value={variantForm.soldBy} onValueChange={(soldBy: "PACK" | "PIECE") => setVariantForm({ ...variantForm, soldBy })}><SelectTrigger className="text-base sm:text-sm"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="PACK">Pack</SelectItem><SelectItem value="PIECE">Piece</SelectItem></SelectContent></Select></Field>
             </div>
           </Section>
 
           <Section title="Weight">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
               <NumberField label="Gross (g)" value={variantForm.grossWeightG} onChange={grossWeightG => setVariantForm({ ...variantForm, grossWeightG })} />
               <NumberField label="Net min (g)" value={variantForm.netWeightMinG} onChange={netWeightMinG => setVariantForm({ ...variantForm, netWeightMinG })} />
               <NumberField label="Net max (g)" value={variantForm.netWeightMaxG} onChange={netWeightMaxG => setVariantForm({ ...variantForm, netWeightMaxG })} />
@@ -287,7 +318,7 @@ export default function AdminProducts() {
           </Section>
 
           <Section title="Price & stock">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
               <NumberField label="MRP (₹)" value={variantForm.mrpRupees} onChange={mrpRupees => setVariantForm({ ...variantForm, mrpRupees })} step="0.01" />
               <NumberField label="Selling (₹)" value={variantForm.priceRupees} onChange={priceRupees => setVariantForm({ ...variantForm, priceRupees })} step="0.01" />
               <NumberField label="In stock" value={variantForm.stockQty} onChange={stockQty => setVariantForm({ ...variantForm, stockQty })} />
@@ -297,20 +328,20 @@ export default function AdminProducts() {
 
           <div className="flex items-center gap-3 border-t pt-4"><Switch checked={variantForm.isActive} onCheckedChange={isActive => setVariantForm({ ...variantForm, isActive })} /><Label>Active pack</Label></div>
         </div>
-        <DialogFooter><Button variant="outline" onClick={() => setVariantOpen(false)}>Cancel</Button><Button onClick={saveVariant} disabled={packPending}>{packPending ? "Saving..." : "Save Pack"}</Button></DialogFooter>
+        <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0 mt-6"><Button variant="outline" className="w-full sm:w-auto min-h-11 sm:min-h-9" onClick={() => setVariantOpen(false)}>Cancel</Button><Button onClick={saveVariant} className="w-full sm:w-auto min-h-11 sm:min-h-9" disabled={packPending}>{packPending ? "Saving..." : "Save Pack"}</Button></DialogFooter>
       </DialogContent></Dialog>
 
       <AlertDialog open={!!deletingPack} onOpenChange={isOpen => { if (!isOpen) setDeletingPack(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {deletingPack?.packLabel}?</AlertDialogTitle>
+            <AlertDialogTitle className="text-primary">Delete {deletingPack?.packLabel}?</AlertDialogTitle>
             <AlertDialogDescription>
               If a customer has already ordered this pack it is archived instead, so past orders keep their record.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeletePack} disabled={deleteVariant.isPending}>Delete</AlertDialogAction>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+            <AlertDialogCancel className="w-full sm:w-auto min-h-11 sm:min-h-9 m-0">Keep</AlertDialogCancel>
+            <AlertDialogAction className="w-full sm:w-auto min-h-11 sm:min-h-9" onClick={confirmDeletePack} disabled={deleteVariant.isPending}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -330,5 +361,5 @@ function Field({ label, className, children }: { label: string; className?: stri
   return <div className={`space-y-1.5 ${className ?? ""}`}><Label>{label}</Label>{children}</div>;
 }
 function NumberField({ label, value, onChange, step }: { label: string; value: string; onChange: (value: string) => void; step?: string }) {
-  return <Field label={label}><Input type="number" min="0" step={step ?? "1"} value={value} onChange={e => onChange(e.target.value)} /></Field>;
+  return <Field label={label}><Input type="number" min="0" step={step ?? "1"} value={value} onChange={e => onChange(e.target.value)} className="text-base sm:text-sm" /></Field>;
 }

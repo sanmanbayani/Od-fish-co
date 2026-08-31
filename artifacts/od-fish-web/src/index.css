@@ -265,3 +265,22 @@
     inset: -1px;
   }
 }
+/*
+ * Safe-area utilities.
+ *
+ * `pb-safe` was already in use by the rider shell's fixed bottom nav but was
+ * never defined, so on a notched phone the nav sat under the home indicator.
+ * These pair with `viewport-fit=cover` in index.html — without that meta value
+ * the env() variables all resolve to 0.
+ */
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility pb-safe-nav {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 5rem);
+}
