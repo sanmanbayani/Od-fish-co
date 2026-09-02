@@ -21,7 +21,7 @@
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#F8F6F1"
       },
-      "package": "com.anonymous.odfishmobile"
+      "package": "com.odfishco.app"
     },
     "web": {
       "favicon": "./assets/images/icon.png"
