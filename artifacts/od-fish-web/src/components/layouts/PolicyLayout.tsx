@@ -14,15 +14,15 @@ type PolicyLayoutProps = {
  * Bump this whenever the substance of any policy changes — the date is a
  * customer-facing claim, not decoration.
  */
-export const POLICY_LAST_UPDATED = "29 August 2026";
+export const POLICY_LAST_UPDATED = "2 September 2026";
 
 export const LEGAL_DETAILS = {
   // TODO(client): Update once company registration is complete.
-  registeredName: "OD Fish Co. (Registration Pending)",
-  gstin: "Registration in progress",
+  registeredName: "OD Fish Co.",
+  gstin: "Applied for",
   registeredAddress: "Mumbai, Maharashtra, India",
   supportEmail: "odfishco@gmail.com",
-  supportPhone: "+91 99999 99999", // Update with your actual support number
+  supportPhone: "+91 7715985408",
 } as const;
 
 export function PolicyLayout({

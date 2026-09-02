@@ -100,8 +100,7 @@ export default function Privacy() {
           {LEGAL_DETAILS.supportEmail}, {LEGAL_DETAILS.supportPhone}, or write to{" "}
           {LEGAL_DETAILS.registeredAddress}.
         </p>
-        {/* TODO(client): Identify the appointed Grievance Officer by name if required for the business. */}
-        <p>Grievance Officer: [Name to be confirmed].</p>
+        <p>Grievance Officer: The Founder, OD Fish Co. — reachable at the email and phone above.</p>
       </PolicySection>
     </PolicyLayout>
   );
