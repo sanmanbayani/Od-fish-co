@@ -17,16 +17,12 @@ type PolicyLayoutProps = {
 export const POLICY_LAST_UPDATED = "29 August 2026";
 
 export const LEGAL_DETAILS = {
-  // TODO(client): Replace with the registered legal entity name before payment-gateway submission.
-  registeredName: "[Registered legal entity name to be confirmed]",
-  // TODO(client): Add the business GSTIN, if applicable, before payment-gateway submission.
-  gstin: "[GSTIN to be confirmed]",
-  // TODO(client): Replace with the complete registered business address.
-  registeredAddress: "[Registered business address to be confirmed]",
-  // TODO(client): Replace with the monitored customer-support email address.
-  supportEmail: "[Support email to be confirmed]",
-  // TODO(client): Replace with the monitored customer-support telephone/WhatsApp number.
-  supportPhone: "[Support phone number to be confirmed]",
+  // TODO(client): Update once company registration is complete.
+  registeredName: "OD Fish Co. (Registration Pending)",
+  gstin: "Registration in progress",
+  registeredAddress: "Mumbai, Maharashtra, India",
+  supportEmail: "odfishco@gmail.com",
+  supportPhone: "+91 99999 99999", // Update with your actual support number
 } as const;
 
 export function PolicyLayout({
