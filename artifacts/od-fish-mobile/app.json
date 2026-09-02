@@ -42,6 +42,12 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "backgroundColor": "#F8F6F1"
+    "backgroundColor": "#F8F6F1",
+    "extra": {
+      "eas": {
+        "projectId": "5982902a-fc1f-42cb-92d7-79b6120d0979"
+      }
+    },
+    "owner": "odfish"
   }
 }
