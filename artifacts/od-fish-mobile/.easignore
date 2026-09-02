@@ -1,0 +1,34 @@
+# EAS Build ignore file
+# Reduces upload size by excluding files that EAS reinstalls on its build servers
+
+# Dependencies (EAS runs its own install)
+node_modules/
+
+# Native build artifacts (EAS generates these fresh)
+android/
+ios/
+
+# IDE files
+.idea/
+.vscode/
+
+# Expo cache
+.expo/
+
+# Git
+.git/
+
+# Build output
+dist/
+web-build/
+
+# Replit
+.replit
+.replit-artifact/
+.cache/
+.local/
+
+# Other workspace artifacts not needed for mobile build
+../od-fish-web/
+../api-server/
+../mockup-sandbox/
