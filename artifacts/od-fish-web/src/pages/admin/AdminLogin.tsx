@@ -36,7 +36,6 @@ export default function AdminLogin() {
       {
         onSuccess: () => {
           queryClient.clear();
-          // Hard redirect so the cookie-backed session is picked up cleanly.
           window.location.href = `${import.meta.env.BASE_URL}admin`;
         },
         onError: (err: any) => {
@@ -48,9 +47,7 @@ export default function AdminLogin() {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-[1.05fr_1fr]">
-      {/* Left: the ice counter */}
       <aside className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-primary px-14 py-12 text-primary-foreground">
-        {/* Faint scale pattern, like light off wet ice */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-[0.07]"
@@ -62,8 +59,6 @@ export default function AdminLogin() {
         />
 
         <div className="relative flex items-center gap-3">
-          {/* The mark is navy ink on cream paper, so it sits on its own cream
-              tile rather than being filtered onto the navy panel. */}
           <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-background">
             <img src={LOGO} alt="" className="h-8 w-8 object-contain" />
           </span>
@@ -105,7 +100,6 @@ export default function AdminLogin() {
         </p>
       </aside>
 
-      {/* Right: the form */}
       <main className="flex items-center justify-center bg-background px-6 py-12">
         <div className="w-full max-w-sm">
           <div className="mb-9 lg:hidden">
@@ -122,7 +116,7 @@ export default function AdminLogin() {
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email">Email address</Label>
+              <Label htmlFor="email" className="text-sm">Email address</Label>
               <Input
                 id="email"
                 type="email"
@@ -130,13 +124,13 @@ export default function AdminLogin() {
                 autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-11"
+                className="h-12 text-base"
                 placeholder="ops@odfishco.in"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-sm">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -144,7 +138,7 @@ export default function AdminLogin() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-11"
+                className="h-12 text-base"
                 placeholder="••••••••"
               />
             </div>
@@ -160,7 +154,7 @@ export default function AdminLogin() {
 
             <Button
               type="submit"
-              className="h-11 w-full text-base"
+              className="h-12 w-full text-base font-semibold"
               disabled={loginMutation.isPending}
             >
               {loginMutation.isPending ? "Signing in…" : "Sign in"}

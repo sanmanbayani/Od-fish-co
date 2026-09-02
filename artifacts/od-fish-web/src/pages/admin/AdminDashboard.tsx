@@ -8,7 +8,6 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
-  IndianRupee,
   PackageOpen,
   ShoppingBag,
   Truck,
@@ -17,14 +16,12 @@ import {
 import { Link } from "wouter";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 
-/** Short weekday for the trend axis; the newest column is always "Today". */
 function dayLabel(iso: string, isLast: boolean): string {
   if (isLast) return "Today";
   const date = new Date(`${iso}T00:00:00`);
   return new Intl.DateTimeFormat("en-IN", { weekday: "short" }).format(date);
 }
 
-/** Compact rupees for the chart, where two decimals are noise: ₹4.1k. */
 function compactRupees(paise: number): string {
   const rupees = paise / 100;
   if (rupees >= 100000) return `₹${(rupees / 100000).toFixed(1)}L`;
@@ -46,8 +43,6 @@ function TrendTooltip({ active, payload }: any) {
 }
 
 export default function AdminDashboard() {
-  // The counter is a live surface — someone leaves it open on a screen through
-  // service, so it has to keep up without anyone reloading it.
   const { data: dashboard, isLoading, error } = useGetAdminDashboard({
     query: {
       refetchInterval: 30000,
@@ -57,7 +52,7 @@ export default function AdminDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-center justify-center p-8 min-h-[50vh]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
@@ -80,21 +75,18 @@ export default function AdminDashboard() {
   }));
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-serif font-bold text-foreground">Operations Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Live overview of today's business</p>
+          <p className="text-muted-foreground mt-1 text-sm">Live overview of today's business</p>
         </div>
-        <div className="flex items-center gap-3 bg-card px-4 py-2 rounded-lg border shadow-sm">
+        <div className="flex items-center gap-3 bg-card px-4 py-3 sm:py-2 rounded-lg border shadow-sm shrink-0">
           <div className={`w-3 h-3 rounded-full ${dashboard.storeOpen ? 'bg-green-500' : 'bg-red-500'}`}></div>
           <span className="font-medium text-sm">{dashboard.storeOpen ? 'Store is Open' : 'Store is Closed'}</span>
         </div>
       </div>
 
-      {/* Two different days are in play at once: what came in today, and what
-          goes out today. Keeping them side by side stops one being read as the
-          other. */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <Card className="hover-elevate" data-testid="card-orders-today">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -173,10 +165,10 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Last 7 days */}
+        {/* Last 7 Days */}
         <Card className="lg:col-span-2">
           <CardHeader className="pb-2">
-            <div className="flex items-baseline justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
               <CardTitle className="text-lg">Last 7 Days</CardTitle>
               <span className="text-sm text-muted-foreground">
                 {compactRupees(trendTotal)} delivered
@@ -189,7 +181,7 @@ export default function AdminDashboard() {
                 No deliveries in the last seven days yet.
               </div>
             ) : (
-              <div className="h-[200px]" data-testid="chart-revenue-trend">
+              <div className="h-[240px] sm:h-[200px] w-full" data-testid="chart-revenue-trend">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                     <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border" />
@@ -198,6 +190,8 @@ export default function AdminDashboard() {
                       tickLine={false}
                       axisLine={false}
                       className="text-xs fill-muted-foreground"
+                      tickMargin={8}
+                      minTickGap={10}
                     />
                     <Tooltip cursor={{ fill: "hsl(var(--muted))" }} content={<TrendTooltip />} />
                     <Bar
@@ -213,12 +207,12 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Running low — the count alone told nobody what to reorder. */}
+        {/* Running low */}
         <Card data-testid="card-low-stock">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Running Low</CardTitle>
-              <PackageOpen className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+              <PackageOpen className="w-4 h-4 text-orange-600 dark:text-orange-400 shrink-0" />
             </div>
           </CardHeader>
           <CardContent>
@@ -228,14 +222,14 @@ export default function AdminDashboard() {
                 <p className="text-sm">Everything well stocked</p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {dashboard.lowStock.slice(0, 5).map((item) => (
                   <div
                     key={item.variantId}
-                    className="flex items-center justify-between gap-2 text-sm"
+                    className="flex items-start justify-between gap-3 text-sm"
                     data-testid={`row-low-stock-${item.variantId}`}
                   >
-                    <span className="truncate">
+                    <span className="min-w-0 flex-1 leading-snug break-words">
                       {item.productName}
                       <span className="text-muted-foreground"> · {item.packLabel}</span>
                     </span>
@@ -248,7 +242,7 @@ export default function AdminDashboard() {
                 ))}
                 <Link
                   href="/admin/inventory"
-                  className="flex items-center gap-1 text-sm text-primary hover:underline pt-2"
+                  className="inline-flex items-center gap-1 text-sm text-primary hover:underline pt-2 font-medium h-8"
                   data-testid="link-inventory"
                 >
                   {dashboard.lowStockCount > 5
@@ -277,21 +271,25 @@ export default function AdminDashboard() {
             ) : (
               <div className="space-y-3">
                 {dashboard.needsAction.slice(0, 5).map(order => (
-                  <Link key={order.id} href={`/admin/orders/${order.id}`}>
-                    <div className="flex items-center justify-between p-3 rounded-md bg-muted/50 hover:bg-muted cursor-pointer transition-colors border">
-                      <div className="flex flex-col">
-                        <span className="font-mono text-sm font-bold">{order.orderNumber}</span>
-                        <span className="text-xs text-muted-foreground">{order.customerName} • {formatOnlyDate(order.deliveryDate)} · {slotWindow(order.slotLabel)}</span>
+                  <Link key={order.id} href={`/admin/orders/${order.id}`} className="block">
+                    <div className="flex items-start justify-between p-3 rounded-md bg-muted/50 hover:bg-muted cursor-pointer transition-colors border gap-3 active:bg-muted/80">
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="font-mono text-sm font-bold truncate">{order.orderNumber}</span>
+                        <span className="text-xs text-muted-foreground mt-0.5 leading-snug break-words line-clamp-2">
+                          {order.customerName} • {formatOnlyDate(order.deliveryDate)} · {slotWindow(order.slotLabel)}
+                        </span>
                       </div>
-                      <div className="text-right flex flex-col items-end">
-                        <span className="text-xs font-bold px-2 py-0.5 rounded bg-primary/10 text-primary">{order.status}</span>
-                        <span className="text-xs text-muted-foreground mt-1">{order.itemCount} items</span>
+                      <div className="text-right flex flex-col items-end shrink-0 gap-1.5">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-primary/10 text-primary uppercase tracking-wide">
+                          {order.status}
+                        </span>
+                        <span className="text-xs text-muted-foreground">{order.itemCount} items</span>
                       </div>
                     </div>
                   </Link>
                 ))}
                 {dashboard.pendingActionCount > 5 && (
-                  <Link href="/admin/orders" className="block text-center text-sm text-primary hover:underline mt-2">
+                  <Link href="/admin/orders" className="block text-center text-sm font-medium text-primary hover:underline mt-4 p-2">
                     View all {dashboard.pendingActionCount} orders
                   </Link>
                 )}
@@ -306,16 +304,19 @@ export default function AdminDashboard() {
             <CardTitle className="text-lg">Slot Load (Upcoming)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-5">
               {dashboard.slotLoad.map(slot => (
-                <div key={`${slot.slotId}|${slot.deliveryDate}`} className="flex flex-col gap-1.5">
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium">{slot.label} <span className="font-normal text-muted-foreground">· {formatOnlyDate(slot.deliveryDate)}</span></span>
-                    <span className="text-muted-foreground">{slot.orders} / {slot.capacity}</span>
+                <div key={`${slot.slotId}|${slot.deliveryDate}`} className="flex flex-col gap-2">
+                  <div className="flex justify-between text-sm items-start gap-3">
+                    <span className="font-medium min-w-0 break-words leading-snug">
+                      {slot.label} 
+                      <span className="font-normal text-muted-foreground ml-1 inline-block">· {formatOnlyDate(slot.deliveryDate)}</span>
+                    </span>
+                    <span className="text-muted-foreground font-medium shrink-0">{slot.orders} / {slot.capacity}</span>
                   </div>
-                  <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                  <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
                     <div 
-                      className={`h-full ${slot.orders >= slot.capacity ? 'bg-destructive' : slot.orders > slot.capacity * 0.8 ? 'bg-orange-500' : 'bg-primary'}`} 
+                      className={`h-full transition-all duration-500 ${slot.orders >= slot.capacity ? 'bg-destructive' : slot.orders > slot.capacity * 0.8 ? 'bg-orange-500' : 'bg-primary'}`} 
                       style={{ width: `${Math.min(100, (slot.orders / slot.capacity) * 100)}%` }}
                     />
                   </div>

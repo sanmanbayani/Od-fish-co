@@ -11,7 +11,9 @@ export function RiderLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-[100dvh] bg-muted/20 flex flex-col max-w-md mx-auto relative shadow-2xl overflow-hidden border-x border-border/50">
-      <header className="bg-primary text-primary-foreground p-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+      {/* pt-safe: with viewport-fit=cover the page draws under the notch, so
+          the header's own controls would sit beneath the cutout without it. */}
+      <header className="bg-primary text-primary-foreground p-4 pt-safe flex items-center justify-between sticky top-0 z-10 shadow-sm">
         <div className="flex flex-col">
           <span className="font-serif text-lg font-bold">OD Fish Rider</span>
           <span className="text-xs opacity-80">{staff?.fullName}</span>
@@ -21,11 +23,13 @@ export function RiderLayout({ children }: { children: React.ReactNode }) {
         </Button>
       </header>
 
-      <main className="flex-1 overflow-y-auto pb-20">
+      <main className="flex-1 overflow-y-auto pb-safe-nav">
         {children}
       </main>
 
-      <nav className="fixed bottom-0 w-full max-w-md bg-background border-t p-2 flex justify-around pb-safe items-center shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+      {/* `fixed` is viewport-relative, so on anything wider than the max-w-md
+          shell this nav has to be re-centred or it hugs the left screen edge. */}
+      <nav className="fixed bottom-0 left-1/2 z-20 flex w-full max-w-md -translate-x-1/2 items-center justify-around border-t bg-background p-2 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
         <Link 
           href="/rider" 
           className={cn(

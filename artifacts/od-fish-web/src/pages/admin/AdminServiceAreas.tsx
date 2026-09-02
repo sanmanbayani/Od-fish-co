@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DataList, DataListItem, DataListField, DataState } from "@/components/data-list";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiErrorMessage } from "@/lib/api-error";
@@ -55,19 +56,86 @@ export default function AdminServiceAreas() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div><h1 className="text-3xl font-serif font-bold text-foreground">Service Areas</h1><p className="text-muted-foreground mt-1">Manage delivery zones</p></div>
-        <Button onClick={() => showDialog()}><Plus className="w-4 h-4 mr-2" /> Add Pincode</Button>
+        <Button className="w-full md:w-auto" onClick={() => showDialog()}><Plus className="w-4 h-4 mr-2" /> Add Pincode</Button>
       </div>
       <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
-        {isLoading ? <div className="p-12 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div> :
-          error ? <div className="p-12 text-center text-destructive">Failed to load service areas.</div> :
-          !pincodes?.length ? <div className="p-12 text-center text-muted-foreground">No service areas configured.</div> :
-          <Table><TableHeader className="bg-muted/50"><TableRow><TableHead>Pincode</TableHead><TableHead>Area Name</TableHead><TableHead>COD Enabled</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-            <TableBody>{pincodes.map(pin => <TableRow key={pin.pincode}>
-              <TableCell className="font-mono font-medium">{pin.pincode}</TableCell><TableCell>{pin.areaName}</TableCell>
-              <TableCell><Badge variant="outline" className={pin.codEnabled ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}>{pin.codEnabled ? "Yes" : "No"}</Badge></TableCell>
-              <TableCell><span className={`text-sm font-medium ${pin.isActive ? "text-green-600" : "text-muted-foreground"}`}>{pin.isActive ? "Active" : "Disabled"}</span></TableCell>
-              <TableCell className="text-right space-x-2"><Button variant="ghost" size="sm" onClick={() => showDialog(pin)}>Edit</Button><Button variant="outline" size="sm" onClick={() => disable(pin)}>{pin.isActive ? "Disable" : "Enable"}</Button></TableCell>
-            </TableRow>)}</TableBody></Table>}
+        {isLoading ? (
+          <DataState>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          </DataState>
+        ) : error ? (
+          <DataState className="text-destructive">
+            Failed to load service areas.
+          </DataState>
+        ) : !pincodes?.length ? (
+          <DataState>
+            No service areas configured.
+          </DataState>
+        ) : (
+          <>
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Pincode</TableHead>
+                    <TableHead>Area Name</TableHead>
+                    <TableHead>COD Enabled</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pincodes.map(pin => (
+                    <TableRow key={pin.pincode}>
+                      <TableCell className="font-mono font-medium">{pin.pincode}</TableCell>
+                      <TableCell>{pin.areaName}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={pin.codEnabled ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}>
+                          {pin.codEnabled ? "Yes" : "No"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`text-sm font-medium ${pin.isActive ? "text-green-600" : "text-muted-foreground"}`}>
+                          {pin.isActive ? "Active" : "Disabled"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button variant="ghost" size="sm" onClick={() => showDialog(pin)}>Edit</Button>
+                        <Button variant="outline" size="sm" onClick={() => disable(pin)}>{pin.isActive ? "Disable" : "Enable"}</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <DataList>
+              {pincodes.map(pin => (
+                <DataListItem
+                  key={pin.pincode}
+                  title={pin.pincode}
+                  subtitle={pin.areaName}
+                  trailing={
+                    <span className={`text-sm font-medium ${pin.isActive ? "text-green-600" : "text-muted-foreground"}`}>
+                      {pin.isActive ? "Active" : "Disabled"}
+                    </span>
+                  }
+                  actions={
+                    <>
+                      <Button variant="outline" className="h-11" onClick={() => showDialog(pin)}>Edit</Button>
+                      <Button variant="outline" className="h-11" onClick={() => disable(pin)}>{pin.isActive ? "Disable" : "Enable"}</Button>
+                    </>
+                  }
+                >
+                  <DataListField label="COD Enabled">
+                    <Badge variant="outline" className={pin.codEnabled ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}>
+                      {pin.codEnabled ? "Yes" : "No"}
+                    </Badge>
+                  </DataListField>
+                </DataListItem>
+              ))}
+            </DataList>
+          </>
+        )}
       </div>
       <Dialog open={open} onOpenChange={setOpen}><DialogContent>
         <DialogHeader><DialogTitle className="font-serif text-2xl">{editing ? "Edit Service Area" : "Add Service Area"}</DialogTitle><DialogDescription>Set the Mumbai pincode, neighbourhood name and COD availability.</DialogDescription></DialogHeader>

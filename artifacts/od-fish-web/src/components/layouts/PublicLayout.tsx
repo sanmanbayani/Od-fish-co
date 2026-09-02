@@ -1,23 +1,95 @@
 import React from "react";
 import { Link } from "wouter";
+import { Menu } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+
+// This header is shared by every public page, so the section anchors have to be
+// absolute. A bare "#about" from /faq or /contact jumps to a target that does
+// not exist on that page instead of returning to the storefront section.
+const base = import.meta.env.BASE_URL;
+
+const sectionLinks = [
+  { href: `${base}#about`, label: "Our Catch" },
+  { href: `${base}#process`, label: "The Process" },
+  { href: `${base}#delivery`, label: "Delivery" },
+];
+
+const pageLinks = [
+  { href: "/faq", label: "FAQ" },
+  { href: "/shipping", label: "Delivery Policy" },
+  { href: "/contact", label: "Contact" },
+];
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-background flex flex-col font-sans">
-      <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-md border-b border-border/40">
+    <div className="min-h-[100dvh] bg-background flex flex-col font-sans">
+      <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-md border-b border-border/40 pt-safe">
         <div className="container mx-auto px-4 md:px-8 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center group">
             <BrandLogo className="h-9 md:h-11 w-auto text-primary transition-transform duration-500 group-hover:scale-105" />
           </Link>
           <nav className="hidden md:flex items-center gap-8 font-medium text-sm text-foreground/80">
-            <a href="#about" className="hover:text-primary transition-colors">Our Catch</a>
-            <a href="#process" className="hover:text-primary transition-colors">The Process</a>
-            <a href="#delivery" className="hover:text-primary transition-colors">Delivery</a>
+            {sectionLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="hover:text-primary transition-colors"
+              >
+                {link.label}
+              </a>
+            ))}
           </nav>
-          <div className="flex items-center">
-             {/* A placeholder for a potential CTA button if we want one */}
-          </div>
+          {/* Mobile menu — without this the nav links are unreachable on a phone */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-11 w-11 md:hidden"
+                aria-label="Open menu"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[16rem] pt-safe">
+              <SheetTitle className="font-serif text-lg">Menu</SheetTitle>
+              <SheetDescription className="sr-only">
+                Site navigation
+              </SheetDescription>
+              <nav className="mt-6 flex flex-col gap-1 text-base font-medium">
+                {sectionLinks.map((link) => (
+                  <SheetClose asChild key={link.href}>
+                    <a
+                      href={link.href}
+                      className="rounded-md px-2 py-3 hover:bg-muted"
+                    >
+                      {link.label}
+                    </a>
+                  </SheetClose>
+                ))}
+                <div className="my-2 border-t border-border/60" />
+                {pageLinks.map((link) => (
+                  <SheetClose asChild key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="rounded-md px-2 py-3 text-foreground/80 hover:bg-muted"
+                    >
+                      {link.label}
+                    </Link>
+                  </SheetClose>
+                ))}
+              </nav>
+            </SheetContent>
+          </Sheet>
         </div>
       </header>
 

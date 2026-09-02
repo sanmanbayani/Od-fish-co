@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DataList, DataListItem, DataListField, DataState } from "@/components/data-list";
 import {
   Select,
   SelectContent,
@@ -222,97 +223,156 @@ export default function AdminStaff() {
           <h1 className="text-3xl font-serif font-bold text-foreground">Staff</h1>
           <p className="text-muted-foreground mt-1">Manage team access and rider accounts</p>
         </div>
-        <Button onClick={() => showDialog()} data-testid="button-add-staff">
+        <Button className="w-full md:w-auto" onClick={() => showDialog()} data-testid="button-add-staff">
           <Plus className="w-4 h-4 mr-2" /> Add Staff
         </Button>
       </div>
 
       <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
         {isLoading ? (
-          <div className="p-12 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
+          <DataState>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </DataState>
         ) : loadError ? (
-          // An empty table would read as "you have no staff", a different problem.
-          <div className="p-12 text-center space-y-2" data-testid="text-staff-failed">
-            <p className="font-medium">Could not load your staff list.</p>
-            <p className="text-sm text-muted-foreground">{apiErrorMessage(loadError, "Refresh the page to try again.")}</p>
-          </div>
+          <DataState className="space-y-2" data-testid="text-staff-failed">
+            <p className="font-medium text-foreground">Could not load your staff list.</p>
+            <p className="text-sm">{apiErrorMessage(loadError, "Refresh the page to try again.")}</p>
+          </DataState>
         ) : !staff?.length ? (
-          <div className="p-12 text-center space-y-1" data-testid="text-staff-empty">
-            <p className="font-medium">No staff accounts yet.</p>
-            <p className="text-sm text-muted-foreground">
+          <DataState className="space-y-1" data-testid="text-staff-empty">
+            <p className="font-medium text-foreground">No staff accounts yet.</p>
+            <p className="text-sm">
               Add your ops team and riders so they can sign in.
             </p>
-          </div>
+          </DataState>
         ) : (
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Activity</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader className="bg-muted/50">
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Activity</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {staff?.map((member) => (
+                    <TableRow key={member.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                            {member.fullName.charAt(0)}
+                          </div>
+                          {member.fullName}
+                          {member.id === me?.id && (
+                            <span className="text-xs text-muted-foreground">(you)</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={member.role === 'ADMIN' ? 'default' : member.role === 'OPS' ? 'secondary' : 'outline'}>
+                          {member.role}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">{member.email}</div>
+                        {member.phone && <div className="text-xs text-muted-foreground">{member.phone}</div>}
+                      </TableCell>
+                      <TableCell>
+                        {member.isActive ? (
+                          <span className="flex items-center gap-1.5 text-sm text-green-600"><span className="w-2 h-2 rounded-full bg-green-500"></span>Active</span>
+                        ) : (
+                          <span className="flex items-center gap-1.5 text-sm text-muted-foreground"><span className="w-2 h-2 rounded-full bg-muted-foreground"></span>Inactive</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {member.role === 'RIDER' && member.deliveriesToday !== undefined ? (
+                          `${member.deliveriesToday} deliveries today`
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell className="text-right space-x-2 whitespace-nowrap">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => showDialog(member)}
+                          data-testid={`button-edit-staff-${member.id}`}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleActive(member)}
+                          disabled={updateStaff.isPending}
+                          data-testid={`button-toggle-staff-${member.id}`}
+                        >
+                          {member.isActive ? "Deactivate" : "Reactivate"}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <DataList>
               {staff?.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                        {member.fullName.charAt(0)}
-                      </div>
+                <DataListItem
+                  key={member.id}
+                  title={
+                    <span className="flex items-center gap-2">
                       {member.fullName}
-                      {member.id === me?.id && (
-                        <span className="text-xs text-muted-foreground">(you)</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
+                      {member.id === me?.id && <span className="text-xs text-muted-foreground font-normal">(you)</span>}
+                    </span>
+                  }
+                  subtitle={member.email}
+                  trailing={
                     <Badge variant={member.role === 'ADMIN' ? 'default' : member.role === 'OPS' ? 'secondary' : 'outline'}>
                       {member.role}
                     </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">{member.email}</div>
-                    {member.phone && <div className="text-xs text-muted-foreground">{member.phone}</div>}
-                  </TableCell>
-                  <TableCell>
+                  }
+                  actions={
+                    <>
+                      <Button
+                        variant="outline"
+                        className="h-11"
+                        onClick={() => showDialog(member)}
+                        data-testid={`mobile-button-edit-staff-${member.id}`}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="h-11"
+                        onClick={() => toggleActive(member)}
+                        disabled={updateStaff.isPending}
+                        data-testid={`mobile-button-toggle-staff-${member.id}`}
+                      >
+                        {member.isActive ? "Deactivate" : "Reactivate"}
+                      </Button>
+                    </>
+                  }
+                >
+                  {member.phone && <DataListField label="Phone">{member.phone}</DataListField>}
+                  <DataListField label="Status">
                     {member.isActive ? (
-                      <span className="flex items-center gap-1.5 text-sm text-green-600"><span className="w-2 h-2 rounded-full bg-green-500"></span>Active</span>
+                      <span className="flex items-center justify-end gap-1.5 text-green-600"><span className="w-2 h-2 rounded-full bg-green-500"></span>Active</span>
                     ) : (
-                      <span className="flex items-center gap-1.5 text-sm text-muted-foreground"><span className="w-2 h-2 rounded-full bg-muted-foreground"></span>Inactive</span>
+                      <span className="flex items-center justify-end gap-1.5 text-muted-foreground"><span className="w-2 h-2 rounded-full bg-muted-foreground"></span>Inactive</span>
                     )}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {member.role === 'RIDER' && member.deliveriesToday !== undefined ? (
-                      `${member.deliveriesToday} deliveries today`
-                    ) : '-'}
-                  </TableCell>
-                  <TableCell className="text-right space-x-2 whitespace-nowrap">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => showDialog(member)}
-                      data-testid={`button-edit-staff-${member.id}`}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => toggleActive(member)}
-                      disabled={updateStaff.isPending}
-                      data-testid={`button-toggle-staff-${member.id}`}
-                    >
-                      {member.isActive ? "Deactivate" : "Reactivate"}
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                  </DataListField>
+                  {member.role === 'RIDER' && member.deliveriesToday !== undefined && (
+                    <DataListField label="Activity">
+                      {member.deliveriesToday} deliveries today
+                    </DataListField>
+                  )}
+                </DataListItem>
               ))}
-            </TableBody>
-          </Table>
+            </DataList>
+          </>
         )}
       </div>
 
@@ -374,7 +434,7 @@ export default function AdminStaff() {
                 value={form.role}
                 onValueChange={(role: Role) => setForm({ ...form, role })}
               >
-                <SelectTrigger data-testid="select-staff-role">
+                <SelectTrigger className="text-base md:text-sm" data-testid="select-staff-role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
