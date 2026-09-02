@@ -19,7 +19,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#F8F6F1"
+        "backgroundColor": "#FFFFFF"
       },
       "package": "com.odfishco.app"
     },
