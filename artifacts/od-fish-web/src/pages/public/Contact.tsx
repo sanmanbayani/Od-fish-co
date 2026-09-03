@@ -53,6 +53,26 @@ export default function Contact() {
         <p>Registered address: {LEGAL_DETAILS.registeredAddress}</p>
       </PolicySection>
 
+      <PolicySection title="Account &amp; data deletion">
+        <p>
+          You may request deletion of your OD Fish Co. account and associated personal data at any
+          time. To make a request, contact us by email at {LEGAL_DETAILS.supportEmail} or WhatsApp at{" "}
+          {LEGAL_DETAILS.supportPhone} with the subject or message "Delete my account" and the
+          mobile number linked to your account.
+        </p>
+        <p>We will verify your identity, then within 30 days:</p>
+        <PolicyList>
+          <li>Permanently delete your profile, saved addresses, and login credentials.</li>
+          <li>Anonymise your order history so it is no longer linked to you.</li>
+          <li>Remove any stored preferences and notification settings.</li>
+        </PolicyList>
+        <p>
+          Certain records — such as tax invoices, payment transaction references and fraud-prevention
+          logs — may be retained for up to the period required by applicable Indian law (typically
+          8 years for financial records), after which they are purged.
+        </p>
+      </PolicySection>
+
       <PolicySection title="Escalations">
         <p>
           If a support response does not resolve your concern, reply on the same email or
