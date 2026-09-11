@@ -16,7 +16,13 @@ import {
 
 const domain = process.env.EXPO_PUBLIC_DOMAIN;
 
-export const API_BASE_URL = domain ? `https://${domain}` : '';
+// If the domain already includes a protocol (e.g. http://10.x.x.x:3000 for
+// local dev), use it as-is. Otherwise assume https for production hostnames.
+export const API_BASE_URL = domain
+  ? /^https?:\/\//i.test(domain)
+    ? domain
+    : `https://${domain}`
+  : '';
 
 setBaseUrl(API_BASE_URL || null);
 

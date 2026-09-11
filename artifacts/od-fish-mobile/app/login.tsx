@@ -3,6 +3,8 @@ import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from 'react-
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { useRequestOtp, useVerifyOtp } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { overlay, radii, spacing } from '@/constants/colors';
@@ -102,33 +104,52 @@ export default function LoginScreen() {
     setError(null);
     setGoogleLoading(true);
     try {
+      // Build the redirect URL using the app's deep link scheme.
+      // Supabase will redirect here after Google consent, appending the
+      // access_token and refresh_token as URL hash fragments.
+      const redirectUrl = Linking.createURL('auth-callback');
+
       const { data, error: supaError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          skipBrowserRedirect: Platform.OS !== 'web',
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: true,
         },
       });
 
-      if (supaError) {
-        setError(supaError.message);
+      if (supaError || !data.url) {
+        setError(supaError?.message ?? 'Could not start Google sign-in.');
         return;
       }
 
-      // On web, the OAuth redirect happens automatically. On native,
-      // we'd use expo-web-browser. For now this covers the basic flow.
-      if (Platform.OS === 'web' && data.url) {
-        // The redirect will handle the rest.
+      // Open the OAuth consent page in a browser. On return, the result
+      // contains the full redirect URL with tokens in the hash fragment.
+      const result = await WebBrowser.openAuthSessionAsync(
+        data.url,
+        redirectUrl,
+      );
+
+      if (result.type !== 'success' || !result.url) {
+        // User cancelled or dismissed the browser.
         return;
       }
 
-      // After OAuth completes (native would return here from the browser),
-      // get the session and send the token to our API.
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
+      // Extract tokens from the URL hash: #access_token=...&refresh_token=...
+      const url = new URL(result.url);
+      const hashParams = new URLSearchParams(
+        url.hash.startsWith('#') ? url.hash.substring(1) : url.hash,
+      );
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
 
       if (!accessToken) {
         setError('Could not complete Google sign-in. Please try again.');
         return;
+      }
+
+      // Set the session on the Supabase client so it persists across app restarts.
+      if (refreshToken) {
+        await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
       }
 
       // Send the Supabase token to our API for verification and customer upsert.
