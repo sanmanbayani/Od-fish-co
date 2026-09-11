@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,8 @@ import { overlay, radii, spacing } from '@/constants/colors';
 import { fonts } from '@/constants/typography';
 import { apiErrorMessage } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
+import { supabase, supabaseConfigured } from '@/lib/supabase';
+import { API_BASE_URL } from '@/lib/api';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { BrandMark } from '@/components/BrandMark';
 import { Text } from '@/components/ui/Text';
@@ -28,6 +30,7 @@ export default function LoginScreen() {
   const [devOtp, setDevOtp] = useState<string | null>(null);
   const [mockAuth, setMockAuth] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const requestOtp = useRequestOtp();
@@ -91,6 +94,78 @@ export default function LoginScreen() {
     }
   };
 
+  const onGoogleSignIn = async () => {
+    if (!supabaseConfigured) {
+      setError('Google sign-in is not configured in this build.');
+      return;
+    }
+    setError(null);
+    setGoogleLoading(true);
+    try {
+      const { data, error: supaError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          skipBrowserRedirect: Platform.OS !== 'web',
+        },
+      });
+
+      if (supaError) {
+        setError(supaError.message);
+        return;
+      }
+
+      // On web, the OAuth redirect happens automatically. On native,
+      // we'd use expo-web-browser. For now this covers the basic flow.
+      if (Platform.OS === 'web' && data.url) {
+        // The redirect will handle the rest.
+        return;
+      }
+
+      // After OAuth completes (native would return here from the browser),
+      // get the session and send the token to our API.
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+
+      if (!accessToken) {
+        setError('Could not complete Google sign-in. Please try again.');
+        return;
+      }
+
+      // Send the Supabase token to our API for verification and customer upsert.
+      const apiUrl = `${API_BASE_URL}/api/auth/google`;
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(
+          (body as { message?: string }).message ??
+            'Google sign-in failed. Please try again.',
+        );
+        return;
+      }
+
+      const session = await res.json();
+      await signIn(session);
+
+      // If the customer needs to add a phone number, go there instead of home.
+      if (session.customer?.needsPhone) {
+        router.replace('/link-phone');
+      } else {
+        close();
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Google sign-in failed.',
+      );
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   return (
     <Screen tone="deep">
       <KeyboardAwareScrollViewCompat
@@ -131,6 +206,39 @@ export default function LoginScreen() {
         >
           {step === 'phone' ? (
             <>
+              {supabaseConfigured ? (
+                <>
+                  <Pressable
+                    onPress={onGoogleSignIn}
+                    disabled={googleLoading}
+                    style={({ pressed }) => [
+                      styles.googleBtn,
+                      {
+                        backgroundColor: colors.card,
+                        borderColor: colors.border,
+                        borderRadius: radii.lg,
+                        opacity: pressed ? 0.9 : 1,
+                      },
+                    ]}
+                  >
+                    {googleLoading ? (
+                      <ActivityIndicator size="small" color={colors.foreground} />
+                    ) : (
+                      <Feather name="chrome" size={18} color={colors.foreground} />
+                    )}
+                    <Text variant="bodyMedium" style={styles.googleLabel}>
+                      Continue with Google
+                    </Text>
+                  </Pressable>
+
+                  <View style={styles.dividerRow}>
+                    <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                    <Text variant="small" tone="muted" style={styles.dividerText}>or</Text>
+                    <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                  </View>
+                </>
+              ) : null}
+
               <TextField
                 label="Mobile number"
                 prefix="+91"
@@ -290,4 +398,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: spacing.md,
   },
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 14,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    marginBottom: spacing.sm,
+  },
+  googleLabel: {
+    lineHeight: 20,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginVertical: spacing.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+  },
+  dividerText: {},
 });

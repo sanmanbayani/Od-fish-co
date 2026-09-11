@@ -114,6 +114,10 @@ function RootLayoutNav() {
         name="login"
         options={{ presentation: 'modal', title: 'Sign in', headerShown: false }}
       />
+      <Stack.Screen
+        name="link-phone"
+        options={{ presentation: 'modal', title: 'Add phone number', headerShown: false }}
+      />
       <Stack.Screen name="product/[slug]" options={{ title: '' }} />
       <Stack.Screen name="cart" options={{ title: 'Your basket' }} />
       <Stack.Screen name="checkout" options={{ title: 'Checkout' }} />

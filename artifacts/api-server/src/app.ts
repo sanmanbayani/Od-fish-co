@@ -9,6 +9,7 @@ import { errorHandler, notFound } from "./lib/http";
 import { logger } from "./lib/logger";
 import { requireTrustedOrigin } from "./middlewares/csrf";
 import router from "./routes";
+import webhooksRouter from "./routes/webhooks";
 
 const app: Express = express();
 
@@ -79,6 +80,27 @@ if (WEB_ORIGINS.length > 0) {
   );
 }
 app.use(cookieParser());
+
+// Razorpay webhooks need the raw body for signature verification. This must
+// come before express.json() which consumes the stream.
+app.use(
+  "/api/webhooks/razorpay",
+  express.raw({ type: "application/json" }),
+  (req, _res, next) => {
+    // Stash the raw buffer and parse it as JSON for route handlers.
+    (req as express.Request & { rawBody?: Buffer }).rawBody = req.body as Buffer;
+    if (Buffer.isBuffer(req.body)) {
+      try {
+        req.body = JSON.parse(req.body.toString());
+      } catch {
+        // Let the handler deal with malformed JSON.
+      }
+    }
+    next();
+  },
+  webhooksRouter,
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

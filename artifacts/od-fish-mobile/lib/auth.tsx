@@ -23,6 +23,8 @@ type AuthState = {
   /** False until AsyncStorage has been read, so guards don't flash. */
   isReady: boolean;
   isSignedIn: boolean;
+  /** True when the customer signed in via Google but has no phone linked yet. */
+  needsPhone: boolean;
   customer: Customer | null;
   signIn: (session: CustomerSession) => Promise<void>;
   signOut: () => Promise<void>;
@@ -113,17 +115,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return false;
   }, [token]);
 
+  const needsPhone = Boolean(customer && !(customer as Customer & { needsPhone?: boolean }).phone);
+
   const value = useMemo<AuthState>(
     () => ({
       isReady,
       isSignedIn: Boolean(token),
+      needsPhone,
       customer,
       signIn,
       signOut,
       setCustomer,
       requireAuth,
     }),
-    [isReady, token, customer, signIn, signOut, setCustomer, requireAuth],
+    [isReady, token, needsPhone, customer, signIn, signOut, setCustomer, requireAuth],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

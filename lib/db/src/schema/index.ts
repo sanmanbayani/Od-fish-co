@@ -58,9 +58,15 @@ export const actorTypeEnum = pgEnum("actor_type", [
 
 export const customers = pgTable("customers", {
   id: uuid("id").primaryKey().defaultRandom(),
-  phone: varchar("phone", { length: 10 }).notNull().unique(),
+  phone: varchar("phone", { length: 10 }).unique(),
   fullName: text("full_name"),
   email: text("email"),
+  /** Supabase Auth user ID, set when the customer signs in with Google. */
+  supabaseUid: text("supabase_uid").unique(),
+  /** How the customer originally created their account. */
+  authProvider: text("auth_provider"),
+  /** Google profile picture URL. */
+  avatarUrl: text("avatar_url"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -347,6 +353,10 @@ export const orders = pgTable(
       .notNull()
       .default("PENDING"),
     paymentReference: text("payment_reference"),
+    /** Razorpay order ID created at checkout for prepaid orders. */
+    razorpayOrderId: text("razorpay_order_id"),
+    /** Razorpay payment ID returned after successful payment. */
+    razorpayPaymentId: text("razorpay_payment_id"),
 
     /**
      * Cash-on-delivery reconciliation. Written once, at the door, when the

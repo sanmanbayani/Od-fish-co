@@ -23,6 +23,41 @@ export const IS_DEVELOPMENT = NODE_ENV === "development" || NODE_ENV === "test";
  */
 export const IS_PUBLIC_ENV = !IS_DEVELOPMENT;
 
+/* -------------------------------------------------------------------------- */
+/*                             Supabase Auth (Google)                          */
+/* -------------------------------------------------------------------------- */
+
+/** Supabase project URL, e.g. https://xxxx.supabase.co */
+export const SUPABASE_URL: string | undefined = process.env.SUPABASE_URL?.trim();
+
+/**
+ * Supabase service-role key — the server uses this to verify access tokens
+ * issued by Supabase Auth. Never expose this to the client.
+ */
+export const SUPABASE_SERVICE_ROLE_KEY: string | undefined =
+  process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+
+/** True when both Supabase env vars are set and Google sign-in can work. */
+export const SUPABASE_AUTH_ENABLED =
+  Boolean(SUPABASE_URL) && Boolean(SUPABASE_SERVICE_ROLE_KEY);
+
+/* -------------------------------------------------------------------------- */
+/*                              Razorpay payments                             */
+/* -------------------------------------------------------------------------- */
+
+export const RAZORPAY_KEY_ID: string | undefined =
+  process.env.RAZORPAY_KEY_ID?.trim();
+
+export const RAZORPAY_KEY_SECRET: string | undefined =
+  process.env.RAZORPAY_KEY_SECRET?.trim();
+
+export const RAZORPAY_WEBHOOK_SECRET: string | undefined =
+  process.env.RAZORPAY_WEBHOOK_SECRET?.trim();
+
+/** True when Razorpay keys are configured and real payments can be processed. */
+export const RAZORPAY_ENABLED =
+  Boolean(RAZORPAY_KEY_ID) && Boolean(RAZORPAY_KEY_SECRET);
+
 /**
  * Stand-in login while DLT/TRAI registration for real SMS is pending.
  *
@@ -117,6 +152,17 @@ export function describeMocks(): string[] {
   if (PAYMENTS_MOCK_ENABLED) {
     notes.push(
       "PAYMENTS_MOCK is on — online payments are simulated and no money moves. Unset this before launch.",
+    );
+  }
+  if (SUPABASE_AUTH_ENABLED) {
+    notes.push("Supabase Auth is configured — Google sign-in is available.");
+  }
+  if (RAZORPAY_ENABLED) {
+    notes.push(
+      `Razorpay is configured (key ${RAZORPAY_KEY_ID?.slice(0, 12)}…). ` +
+        (RAZORPAY_KEY_ID?.startsWith("rzp_test_")
+          ? "Running in TEST mode — no real money moves."
+          : "Running in LIVE mode."),
     );
   }
   return notes;

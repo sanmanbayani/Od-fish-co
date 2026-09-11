@@ -12,8 +12,9 @@ import {
 } from "@workspace/db";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
-import { IS_DEVELOPMENT, PAYMENTS_MOCK_ENABLED } from "../lib/env";
+import { IS_DEVELOPMENT, PAYMENTS_MOCK_ENABLED, RAZORPAY_ENABLED } from "../lib/env";
 import { badRequest, conflict, notFound, notImplemented, parseBody } from "../lib/http";
+import { createRazorpayOrder, getRazorpayKeyId, verifyPaymentSignature } from "../lib/razorpay";
 import {
   customerCanCancel,
   type Executor,
@@ -266,6 +267,32 @@ router.post("/", async (req, res) => {
     return order;
   });
 
+  // For prepaid orders, create a Razorpay order so the client can open checkout.
+  let razorpayOrderId: string | null = null;
+  if (isPrepaid && RAZORPAY_ENABLED) {
+    try {
+      const rzpOrder = await createRazorpayOrder({
+        amountPaise: created.totalPaise,
+        receipt: created.orderNumber,
+        notes: {
+          orderId: created.id,
+          orderNumber: created.orderNumber,
+          customerId: customer.id,
+        },
+      });
+      razorpayOrderId = rzpOrder.id;
+
+      // Persist so we can verify the signature later.
+      await db
+        .update(orders)
+        .set({ razorpayOrderId: rzpOrder.id })
+        .where(eq(orders.id, created.id));
+    } catch (err) {
+      req.log.error({ err, orderId: created.id }, "Razorpay order creation failed");
+      // Order still exists in PENDING_PAYMENT — customer can retry.
+    }
+  }
+
   await recordOrderEvent({
     orderId: created.id,
     fromStatus: null,
@@ -281,7 +308,15 @@ router.post("/", async (req, res) => {
   notifyOrderStatus(created);
 
   const [bundle] = await loadOrderBundles([created]);
-  res.status(201).json(serializeCustomerOrder(bundle!));
+  const response: Record<string, unknown> = serializeCustomerOrder(bundle!);
+
+  // Include Razorpay checkout params so the mobile client can open the modal.
+  if (razorpayOrderId) {
+    response.razorpayOrderId = razorpayOrderId;
+    response.razorpayKeyId = getRazorpayKeyId();
+  }
+
+  res.status(201).json(response);
 });
 
 async function loadOwnOrder(customerId: string, orderId: string) {
@@ -313,6 +348,77 @@ router.get("/:id", async (req, res) => {
  * degrade.
  */
 router.post("/:id/pay", async (req, res) => {
+  const order = await loadOwnOrder(req.customer!.id, String(req.params.id));
+
+  if (order.status !== "PENDING_PAYMENT") {
+    throw conflict("This order is not waiting for payment.", "not_payable");
+  }
+
+  // --- Path A: Razorpay signature verification (production) ---
+  const { razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body as {
+    razorpayPaymentId?: string;
+    razorpayOrderId?: string;
+    razorpaySignature?: string;
+  };
+
+  const isRazorpayVerification =
+    razorpayPaymentId && razorpayOrderId && razorpaySignature;
+
+  if (isRazorpayVerification) {
+    // Verify the Razorpay order ID matches what we stored.
+    if (order.razorpayOrderId && order.razorpayOrderId !== razorpayOrderId) {
+      throw badRequest("Razorpay order ID does not match.", "razorpay_mismatch");
+    }
+
+    const valid = verifyPaymentSignature({
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature,
+    });
+
+    if (!valid) {
+      throw badRequest("Payment signature verification failed.", "invalid_signature");
+    }
+
+    const updated = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .update(orders)
+        .set({
+          status: "PLACED",
+          paymentStatus: "PAID",
+          paymentReference: razorpayPaymentId,
+          razorpayPaymentId,
+        })
+        .where(and(eq(orders.id, order.id), eq(orders.status, "PENDING_PAYMENT")))
+        .returning();
+
+      if (!row) {
+        throw conflict("This order is not waiting for payment.", "not_payable");
+      }
+
+      await recordOrderEvent(
+        {
+          orderId: order.id,
+          fromStatus: order.status,
+          toStatus: "PLACED",
+          note: `Payment received via Razorpay (${razorpayPaymentId})`,
+          actorType: "CUSTOMER",
+          actorId: req.customer!.id,
+        },
+        tx,
+      );
+
+      return row;
+    });
+
+    notifyOrderStatus(updated);
+
+    const [bundle] = await loadOrderBundles([updated]);
+    res.json(serializeCustomerOrder(bundle!));
+    return;
+  }
+
+  // --- Path B: Mock settlement (dev / demo only) ---
   if (!IS_DEVELOPMENT && !PAYMENTS_MOCK_ENABLED) {
     throw notImplemented(
       "Online payment is not switched on yet. Please choose cash on delivery.",
@@ -321,17 +427,9 @@ router.post("/:id/pay", async (req, res) => {
   }
 
   const body = parseBody(PayOrderBody, req.body);
-  const order = await loadOwnOrder(req.customer!.id, String(req.params.id));
-
-  if (order.status !== "PENDING_PAYMENT") {
-    throw conflict("This order is not waiting for payment.", "not_payable");
-  }
-
   const succeeded = body.outcome === "SUCCESS";
 
   const updated = await db.transaction(async (tx) => {
-    // Conditional update: whoever gets there first wins, a second concurrent
-    // call finds no row and is told the order already moved on.
     const [row] = await tx
       .update(orders)
       .set({
@@ -367,8 +465,6 @@ router.post("/:id/pay", async (req, res) => {
     return row;
   });
 
-  // Only a successful settlement is worth a message: the order has just become
-  // real. A failed one is already on the screen the customer is looking at.
   notifyOrderStatus(updated);
 
   const [bundle] = await loadOrderBundles([updated]);

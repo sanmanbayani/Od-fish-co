@@ -16,6 +16,7 @@ import { useColors } from '@/hooks/useColors';
 import { radii, spacing } from '@/constants/colors';
 import { apiErrorMessage, rupees } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
+import { openRazorpayCheckout } from '@/lib/razorpay';
 import { SlotPicker, slotKey } from '@/components/SlotPicker';
 import { getPreferredSlot, setPreferredSlot } from '@/lib/preferredSlot';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
@@ -49,7 +50,7 @@ const PAYMENT_OPTIONS: PaymentOption[] = [
 export default function CheckoutScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, customer } = useAuth();
   const queryClient = useQueryClient();
 
   const cart = useGetCart({ query: { queryKey: ['cart'], enabled: isSignedIn } });
@@ -162,19 +163,52 @@ export default function CheckoutScreen() {
         },
       });
 
-      // Prepaid orders land in PENDING_PAYMENT. No gateway is wired yet, so the
-      // server exposes a test-mode settlement route outside production. If that
-      // route is unavailable the order still exists and is simply awaiting
-      // payment — so we take the customer to it rather than losing it behind an
-      // error.
+      // Prepaid orders land in PENDING_PAYMENT and need payment settlement.
       if (payment !== 'COD') {
-        try {
-          await payOrder.mutateAsync({
-            id: order.id,
-            data: { outcome: 'SUCCESS', reference: `TEST-${Date.now()}` },
-          });
-        } catch {
-          // Fall through to the order screen, which shows the pending state.
+        const orderAny = order as Record<string, unknown>;
+        const razorpayOrderId = orderAny.razorpayOrderId as string | undefined;
+        const razorpayKeyId = orderAny.razorpayKeyId as string | undefined;
+
+        if (razorpayOrderId && razorpayKeyId) {
+          // --- Razorpay checkout (production path) ---
+          try {
+            const rzpResult = await openRazorpayCheckout({
+              key: razorpayKeyId,
+              amount: cart.data.bill.totalPaise,
+              name: 'OD Fish Co.',
+              description: `Order ${order.orderNumber}`,
+              order_id: razorpayOrderId,
+              prefill: {
+                name: customer?.fullName ?? undefined,
+                email: customer?.email ?? undefined,
+                contact: customer?.phone ? `+91${customer.phone}` : undefined,
+              },
+              theme: { color: '#0F766E' },
+            });
+
+            // Verify the payment on our server.
+            await payOrder.mutateAsync({
+              id: order.id,
+              data: {
+                razorpayPaymentId: rzpResult.razorpay_payment_id,
+                razorpayOrderId: rzpResult.razorpay_order_id,
+                razorpaySignature: rzpResult.razorpay_signature,
+              } as Record<string, string>,
+            });
+          } catch (rzpErr) {
+            // Payment cancelled or failed — order stays in PENDING_PAYMENT.
+            // Take the customer to the order screen where they can retry.
+          }
+        } else {
+          // --- Mock settlement (dev/demo fallback) ---
+          try {
+            await payOrder.mutateAsync({
+              id: order.id,
+              data: { outcome: 'SUCCESS', reference: `TEST-${Date.now()}` },
+            });
+          } catch {
+            // Fall through to the order screen, which shows the pending state.
+          }
         }
       }
 
