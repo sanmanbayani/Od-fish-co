@@ -196,6 +196,7 @@ export default function CheckoutScreen() {
               } as Record<string, string>,
             });
           } catch (rzpErr) {
+            console.warn('[Razorpay] Checkout modal error:', rzpErr);
             // Payment cancelled or failed — order stays in PENDING_PAYMENT.
             // Take the customer to the order screen where they can retry.
           }
@@ -348,12 +349,7 @@ export default function CheckoutScreen() {
               );
             })}
           </View>
-          {payment !== 'COD' ? (
-            <Text variant="tiny" tone="muted" style={styles.mockNote}>
-              A live payment gateway is not connected yet, so prepaid orders are
-              settled in test mode.
-            </Text>
-          ) : null}
+
         </View>
 
         {/* Note */}
@@ -540,7 +536,6 @@ const styles = StyleSheet.create({
   },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   warn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
-  mockNote: { marginTop: 8 },
   billRows: { marginTop: 12, gap: 8 },
   billRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   divider: { marginVertical: 12 },
