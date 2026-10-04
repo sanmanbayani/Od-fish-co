@@ -3,14 +3,14 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import type { Category } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
-import { radii } from '@/constants/colors';
 import { mediaUrl } from '@/lib/api';
+import { CATEGORY_PREVIEWS } from '@/constants/studioPreviews';
 import { Text } from '@/components/ui/Text';
 
 export function CategoryTile({
   category,
   onPress,
-  width = 92,
+  width = 84,
 }: {
   category: Category;
   onPress: () => void;
@@ -20,26 +20,21 @@ export function CategoryTile({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [{ width, opacity: pressed ? 0.85 : 1 }]}
+      style={({ pressed }) => [{ width, alignItems: 'center', opacity: pressed ? 0.85 : 1 }]}
     >
-      <View
-        style={[
-          styles.imageWrap,
-          {
-            backgroundColor: colors.accent,
-            borderColor: colors.border,
-            borderRadius: radii.xl,
-          },
-        ]}
-      >
+      <View style={styles.imageWrap}>
         <Image
-          source={mediaUrl(category.imageUrl)}
+          source={CATEGORY_PREVIEWS[category.slug] ?? mediaUrl(category.imageUrl)}
           style={styles.image}
-          contentFit="cover"
+          contentFit="contain"
           transition={180}
         />
       </View>
-      <Text variant="smallMedium" numberOfLines={1} style={styles.name}>
+      <Text
+        variant="smallMedium"
+        numberOfLines={1}
+        style={[styles.name, { color: colors.foreground }]}
+      >
         {category.name}
       </Text>
       {category.nameLocal ? (
@@ -55,10 +50,19 @@ const styles = StyleSheet.create({
   imageWrap: {
     width: '100%',
     aspectRatio: 1,
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  image: { width: '100%', height: '100%' },
-  name: { marginTop: 7, textAlign: 'center' },
-  local: { textAlign: 'center', marginTop: 1 },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  name: {
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  local: {
+    textAlign: 'center',
+    marginTop: 1,
+  },
 });

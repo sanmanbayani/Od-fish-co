@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Modal,
   Pressable,
   RefreshControl,
@@ -20,19 +21,28 @@ import {
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { mint, overlay, radii, spacing } from '@/constants/colors';
+import { fonts } from '@/constants/typography';
 import { countdown, deliveryDate } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
 import { setPreferredSlot, usePreferredSlot } from '@/lib/preferredSlot';
-import { LogoGlyph } from '@/components/BrandMark';
 import { CartBar } from '@/components/CartBar';
 import { CategoryTile } from '@/components/CategoryTile';
 import { ProductCard } from '@/components/ProductCard';
 import { SlotPicker, slotKey } from '@/components/SlotPicker';
 import { Text } from '@/components/ui/Text';
-import { Badge } from '@/components/ui/Badge';
 import { LoadingView, ErrorView } from '@/components/ui/StateViews';
 import { CATALOGUE_POLL_MS } from '@/constants/query';
 import { Screen, TAB_BAR_CLEARANCE } from '@/components/ui/Screen';
+
+/* ------------------------------------------------------------------ assets */
+const heroFishingBg = require('@/assets/images/hero-fishing-bg.png');
+const heroManEating = require('@/assets/images/hero-man-eating.png');
+
+/* ------------------------------------------------------------------ colors */
+/** Soft powder-blue used in the Figma hero band background. */
+const HERO_BG = '#C8D7F7';
+const HERO_SEARCH_BG = '#FFFFFF';
+const HERO_SEARCH_BORDER = 'rgba(0,0,0,0.06)';
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -127,113 +137,123 @@ export default function HomeScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Deep-water header band */}
+        {/* ============================================================== */}
+        {/*  NEW HERO — light lavender band with illustration compositing  */}
+        {/* ============================================================== */}
         <View
           style={[
-            styles.header,
-            { backgroundColor: colors.deep, paddingTop: insets.top + spacing.md },
+            styles.hero,
+            { backgroundColor: HERO_BG, paddingTop: insets.top + spacing.sm },
           ]}
         >
-          <View style={styles.headerRow}>
+          {/* ---- Top bar: delivery chip + profile ---- */}
+          <View style={styles.heroTopBar}>
             <Pressable
               onPress={() => router.push(customer ? '/addresses' : '/login')}
               hitSlop={6}
-              style={styles.locationChip}
+              style={styles.deliverChip}
             >
-              <View style={styles.pinBubble}>
-                <Feather name="map-pin" size={15} color={mint} />
+              <View style={styles.deliverIcon}>
+                <Feather name="map-pin" size={15} color="#FFFFFF" />
               </View>
-              <View style={styles.locationStack}>
-                <Text variant="tiny" uppercase style={styles.locationKicker}>
+              <View style={styles.deliverStack}>
+                <Text variant="tiny" uppercase style={styles.deliverKicker}>
                   Deliver to
                 </Text>
-                <View style={styles.locationRow}>
-                  <Text
-                    variant="smallMedium"
-                    tone="inverse"
-                    numberOfLines={1}
-                    style={styles.locationName}
-                  >
-                    {locationLabel}
-                  </Text>
-                  <Feather
-                    name="chevron-down"
-                    size={14}
-                    color={overlay.mutedForeground}
-                  />
-                </View>
+                <Text
+                  variant="smallMedium"
+                  numberOfLines={1}
+                  style={styles.deliverName}
+                >
+                  {locationLabel}
+                </Text>
               </View>
             </Pressable>
             <Pressable
               onPress={() => router.push('/(tabs)/account')}
               hitSlop={6}
-              style={[
-                styles.profileBtn,
-                { borderColor: overlay.hairline, backgroundColor: overlay.fill },
-              ]}
+              style={styles.profileBtn}
             >
               {initial ? (
-                <Text variant="smallMedium" tone="inverse">
+                <Text variant="smallMedium" style={{ color: '#3D4460' }}>
                   {initial}
                 </Text>
               ) : (
-                <Feather name="user" size={17} color={colors.deepForeground} />
+                <Feather name="user" size={17} color="#3D4460" />
               )}
             </Pressable>
           </View>
 
-          <View style={styles.brandRow}>
-            <LogoGlyph width={46} color={colors.deepForeground} />
-            <Badge
-              label={data.storeOpen ? 'Counter open' : 'Counter closed'}
-              tone={data.storeOpen ? 'success' : 'neutral'}
+          {/* ---- Search bar ---- */}
+          <Pressable
+            onPress={() => router.push('/(tabs)/shop')}
+            style={styles.searchBar}
+          >
+            <Text variant="body" style={styles.searchPlaceholder}>
+              Search for..
+            </Text>
+            <Feather name="search" size={18} color="#9CA3AF" />
+          </Pressable>
+
+          {/* ---- Illustration zone ---- */}
+          <View style={styles.heroIllustration}>
+            {/* Fishing background — covers the full width, faded */}
+            <Image
+              source={heroFishingBg}
+              style={styles.heroBgImage}
+              resizeMode="cover"
             />
-          </View>
 
-          <Text variant="hero" tone="inverse" style={styles.headline}>
-            Off the boat,{'\n'}on your plate.
-          </Text>
-          <Text variant="small" style={styles.subline}>
-            {customer?.fullName
-              ? `Fresh from Sassoon Dock this morning, ${customer.fullName.split(' ')[0]} — cleaned and cut to order.`
-              : 'Sassoon Dock’s morning catch, cleaned and cut to order for Mumbai kitchens.'}
-          </Text>
-
-          {shownSlot ? (
-            <Pressable
-              onPress={() => setSlotSheetOpen(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Choose your delivery slot"
-              style={[styles.slotStrip, { borderColor: overlay.hairline }]}
-            >
-              <Feather
-                name={preferredSlot ? 'check-circle' : 'clock'}
-                size={14}
-                color={preferredSlot ? mint : overlay.mutedForeground}
-              />
-              <Text variant="smallMedium" tone="inverse" style={styles.flex}>
-                {deliveryDate(shownSlot.deliveryDate)} · {shownSlot.label}
+            {/* Title text — centered above illustrations */}
+            <View style={styles.heroTitleWrap}>
+              <Text style={styles.heroTitle}>
+                Off the boat
               </Text>
-              {stripHint ? (
-                <Text variant="tiny" style={{ color: mint }}>
-                  {stripHint}
-                </Text>
-              ) : null}
-              <Feather
-                name="chevron-right"
-                size={15}
-                color={overlay.mutedForeground}
-              />
-            </Pressable>
-          ) : (
-            <View style={[styles.slotStrip, { borderColor: overlay.hairline }]}>
-              <Feather name="moon" size={14} color={overlay.mutedForeground} />
-              <Text variant="smallMedium" tone="inverse" style={styles.flex}>
-                No slots open right now — check back in the morning.
+              <Text style={styles.heroSubtitle}>
+                on your plate
               </Text>
             </View>
-          )}
+
+            {/* Man eating fish — centered at the bottom */}
+            <Image
+              source={heroManEating}
+              style={styles.heroCharacter}
+              resizeMode="contain"
+            />
+          </View>
         </View>
+
+        {/* ---- Delivery slot strip (moved below hero) ---- */}
+        {shownSlot ? (
+          <Pressable
+            onPress={() => setSlotSheetOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Choose your delivery slot"
+            style={[
+              styles.slotStripNew,
+              { borderColor: colors.border, backgroundColor: colors.card },
+            ]}
+          >
+            <Feather
+              name={preferredSlot ? 'check-circle' : 'clock'}
+              size={14}
+              color={preferredSlot ? colors.success : colors.mutedForeground}
+            />
+            <Text variant="smallMedium" style={styles.flex}>
+              {deliveryDate(shownSlot.deliveryDate)} · {shownSlot.label}
+            </Text>
+            {stripHint ? (
+              <Text variant="tiny" style={{ color: colors.success }}>
+                {stripHint}
+              </Text>
+            ) : null}
+            <Feather
+              name="chevron-right"
+              size={15}
+              color={colors.mutedForeground}
+            />
+          </Pressable>
+        ) : null}
 
         <Modal
           visible={slotSheetOpen}
@@ -419,63 +439,143 @@ function SectionHeader({
   );
 }
 
+/* ================================================================ styles */
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-    borderBottomLeftRadius: 26,
-    borderBottomRightRadius: 26,
+  /* ------ NEW hero styles ------ */
+  hero: {
+    overflow: 'hidden',
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
   },
-  headerRow: {
+  heroTopBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
     gap: 12,
   },
-  locationChip: {
+  deliverChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     flex: 1,
   },
-  pinBubble: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+  deliverIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: overlay.fill,
+    backgroundColor: '#4B5068',
   },
-  locationStack: { flexShrink: 1 },
-  locationKicker: { color: overlay.mutedForeground, letterSpacing: 1 },
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  locationName: { flexShrink: 1 },
+  deliverStack: { flexShrink: 1 },
+  deliverKicker: {
+    color: '#4B5068',
+    letterSpacing: 0.8,
+    fontSize: 10,
+    fontFamily: fonts.bodySemi,
+  },
+  deliverName: {
+    color: '#0B1A3D',
+    flexShrink: 1,
+    fontFamily: fonts.bodyBold,
+    fontSize: 14,
+  },
   profileBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
     borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.08)',
   },
-  brandRow: {
+
+  /* Search bar */
+  searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: spacing.xl,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    borderRadius: radii.xl,
+    backgroundColor: HERO_SEARCH_BG,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: HERO_SEARCH_BORDER,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
-  headline: { marginTop: spacing.md },
-  subline: { color: overlay.mutedForeground, marginTop: 6, lineHeight: 19 },
-  slotStrip: {
+  searchPlaceholder: {
+    color: '#9CA3AF',
+    fontFamily: fonts.body,
+    fontSize: 14,
+  },
+
+  /* Illustration zone */
+  heroIllustration: {
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: spacing.xs,
+    minHeight: 250,
+    position: 'relative',
+  },
+  heroBgImage: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '100%',
+    width: '100%',
+    opacity: 0.32,
+  },
+  heroTitleWrap: {
+    alignItems: 'center',
+    zIndex: 2,
+    marginBottom: 6,
+  },
+  heroTitle: {
+    color: '#101B4B',
+    fontSize: 32,
+    lineHeight: 38,
+    fontFamily: fonts.bodyBold,
+    textAlign: 'center',
+    letterSpacing: -0.5,
+  },
+  heroSubtitle: {
+    color: '#5C6A8A',
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  heroCharacter: {
+    width: 255,
+    height: 145,
+    zIndex: 3,
+    marginBottom: 0,
+  },
+
+  /* Delivery slot strip (below hero) */
+  slotStripNew: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: spacing.lg,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    marginTop: spacing.md,
+    marginHorizontal: spacing.lg,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.lg,
+    borderRadius: radii.xl,
   },
+
+  /* ------ Unchanged styles ------ */
   flex: { flex: 1 },
   sheetRoot: { flex: 1, justifyContent: 'flex-end' },
   sheetScrim: {

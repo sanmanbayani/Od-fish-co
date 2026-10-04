@@ -17,6 +17,7 @@ import { useColors } from '@/hooks/useColors';
 import { radii, spacing } from '@/constants/colors';
 import { CATALOGUE_POLL_MS } from '@/constants/query';
 import { mediaUrl } from '@/lib/api';
+import { STUDIO_PREVIEWS } from '@/constants/studioPreviews';
 import {
   apiErrorMessage,
   cutLabel,
@@ -129,7 +130,7 @@ export default function ProductScreen() {
       >
         <View style={[styles.hero, { backgroundColor: colors.accent, height: width * 0.82 }]}>
           <Image
-            source={mediaUrl(item.imageUrls?.[0])}
+            source={STUDIO_PREVIEWS[item.slug] ?? mediaUrl(item.imageUrls?.[0])}
             style={styles.heroImage}
             contentFit="cover"
             transition={200}

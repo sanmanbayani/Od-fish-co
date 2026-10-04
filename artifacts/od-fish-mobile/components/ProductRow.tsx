@@ -7,6 +7,7 @@ import type { Product } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { overlay, radii } from '@/constants/colors';
 import { mediaUrl } from '@/lib/api';
+import { STUDIO_PREVIEWS } from '@/constants/studioPreviews';
 import { cutLabel, discountPercent, rupees } from '@/lib/format';
 import { Text } from '@/components/ui/Text';
 import { Badge } from '@/components/ui/Badge';
@@ -34,7 +35,7 @@ export function ProductRow({ product }: { product: Product }) {
     >
       <View style={[styles.thumbWrap, { backgroundColor: colors.accent }]}>
         <Image
-          source={mediaUrl(product.imageUrls?.[0])}
+          source={STUDIO_PREVIEWS[product.slug] ?? mediaUrl(product.imageUrls?.[0])}
           style={styles.thumb}
           contentFit="cover"
           transition={180}
