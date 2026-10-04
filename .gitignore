@@ -24,6 +24,8 @@ node_modules
 *.launch
 .settings/
 *.sublime-workspace
+backups/
+*.backup.*
 
 # IDE - VSCode
 .vscode/*
