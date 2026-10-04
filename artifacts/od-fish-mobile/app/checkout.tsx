@@ -165,7 +165,7 @@ export default function CheckoutScreen() {
 
       // Prepaid orders land in PENDING_PAYMENT and need payment settlement.
       if (payment !== 'COD') {
-        const orderAny = order as Record<string, unknown>;
+        const orderAny = order as unknown as Record<string, unknown>;
         const razorpayOrderId = orderAny.razorpayOrderId as string | undefined;
         const razorpayKeyId = orderAny.razorpayKeyId as string | undefined;
 
@@ -190,10 +190,12 @@ export default function CheckoutScreen() {
             await payOrder.mutateAsync({
               id: order.id,
               data: {
+                outcome: 'SUCCESS',
+                reference: rzpResult.razorpay_payment_id,
                 razorpayPaymentId: rzpResult.razorpay_payment_id,
                 razorpayOrderId: rzpResult.razorpay_order_id,
                 razorpaySignature: rzpResult.razorpay_signature,
-              } as Record<string, string>,
+              } as unknown as any,
             });
           } catch (rzpErr) {
             console.warn('[Razorpay] Checkout modal error:', rzpErr);
