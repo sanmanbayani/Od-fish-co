@@ -191,7 +191,7 @@ async function registerThisDevice(): Promise<void> {
   } catch (error) {
     // Never surface this. The customer did not ask for notifications right now;
     // they asked for a fish shop.
-    console.warn('[push] Could not register this device', error);
+    console.info('[push] Could not register this device', error);
   }
 }
 
