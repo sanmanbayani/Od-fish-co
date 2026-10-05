@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Image,
   Modal,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -128,73 +128,144 @@ export default function HomeScreen() {
       ? countdown(slot.secondsToCutoff)
       : null) ?? (preferredSlot ? 'Your slot' : null);
 
+  /* ---- Scroll-driven sticky header ---- */
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  // Background: transparent → white as user scrolls
+  const stickyBg = scrollY.interpolate({
+    inputRange: [0, 80],
+    outputRange: ['rgba(255,255,255,0)', 'rgba(255,255,255,0.97)'],
+    extrapolate: 'clamp',
+  });
+  // Shadow: 0 → visible
+  const stickyShadowOpacity = scrollY.interpolate({
+    inputRange: [0, 80],
+    outputRange: [0, 0.08],
+    extrapolate: 'clamp',
+  });
+  // Address bar collapses as user scrolls (height, opacity, spacing)
+  const addressBarHeight = scrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [44, 0],
+    extrapolate: 'clamp',
+  });
+  const addressBarOpacity = scrollY.interpolate({
+    inputRange: [0, 40],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+  const addressBarMargin = scrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [spacing.sm, 0],
+    extrapolate: 'clamp',
+  });
+  // Elevation for Android (0 initially, ramps up with scroll)
+  const stickyElevation = scrollY.interpolate({
+    inputRange: [0, 80],
+    outputRange: [0, 4],
+    extrapolate: 'clamp',
+  });
+
   return (
     <Screen>
-      <ScrollView
+      {/* ---- Sticky header: address bar + search bar ---- */}
+      <Animated.View
+        style={[
+          styles.stickySearchWrap,
+          {
+            paddingTop: insets.top + spacing.sm,
+            backgroundColor: stickyBg,
+            shadowOpacity: stickyShadowOpacity,
+            elevation: stickyElevation,
+          },
+        ]}
+      >
+        {/* Address bar — collapses on scroll */}
+        <Animated.View
+          style={[
+            styles.heroTopBar,
+            {
+              height: addressBarHeight,
+              opacity: addressBarOpacity,
+              marginBottom: addressBarMargin,
+              overflow: 'hidden',
+            },
+          ]}
+        >
+          <Pressable
+            onPress={() => router.push(customer ? '/addresses' : '/login')}
+            hitSlop={6}
+            style={styles.deliverChip}
+          >
+            <View style={styles.deliverIcon}>
+              <Feather name="map-pin" size={15} color="#FFFFFF" />
+            </View>
+            <View style={styles.deliverStack}>
+              <Text variant="tiny" uppercase style={styles.deliverKicker}>
+                Deliver to
+              </Text>
+              <Text
+                variant="smallMedium"
+                numberOfLines={1}
+                style={styles.deliverName}
+              >
+                {locationLabel}
+              </Text>
+            </View>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push('/(tabs)/account')}
+            hitSlop={6}
+            style={styles.profileBtn}
+          >
+            {initial ? (
+              <Text variant="smallMedium" style={{ color: '#3D4460' }}>
+                {initial}
+              </Text>
+            ) : (
+              <Feather name="user" size={17} color="#3D4460" />
+            )}
+          </Pressable>
+        </Animated.View>
+
+        {/* Search bar */}
+        <Pressable
+          onPress={() =>
+            router.push({
+              pathname: '/(tabs)/shop',
+              params: { autofocus: Date.now().toString() },
+            })
+          }
+          style={styles.searchBar}
+        >
+          <Feather name="search" size={18} color="#9CA3AF" />
+          <Text variant="body" style={styles.searchPlaceholder}>
+            Search for..
+          </Text>
+        </Pressable>
+      </Animated.View>
+
+      <Animated.ScrollView
         contentContainerStyle={{ paddingBottom: TAB_BAR_CLEARANCE + 60 }}
         refreshControl={
           <RefreshControl refreshing={feed.isRefetching} onRefresh={onRefresh} />
         }
         showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false },
+        )}
       >
         {/* ============================================================== */}
-        {/*  NEW HERO — light lavender band with illustration compositing  */}
+        {/*  HERO — light lavender band with illustration compositing      */}
         {/* ============================================================== */}
         <View
           style={[
             styles.hero,
-            { backgroundColor: HERO_BG, paddingTop: insets.top + spacing.sm },
+            { backgroundColor: HERO_BG, paddingTop: insets.top + 104 },
           ]}
         >
-          {/* ---- Top bar: delivery chip + profile ---- */}
-          <View style={styles.heroTopBar}>
-            <Pressable
-              onPress={() => router.push(customer ? '/addresses' : '/login')}
-              hitSlop={6}
-              style={styles.deliverChip}
-            >
-              <View style={styles.deliverIcon}>
-                <Feather name="map-pin" size={15} color="#FFFFFF" />
-              </View>
-              <View style={styles.deliverStack}>
-                <Text variant="tiny" uppercase style={styles.deliverKicker}>
-                  Deliver to
-                </Text>
-                <Text
-                  variant="smallMedium"
-                  numberOfLines={1}
-                  style={styles.deliverName}
-                >
-                  {locationLabel}
-                </Text>
-              </View>
-            </Pressable>
-            <Pressable
-              onPress={() => router.push('/(tabs)/account')}
-              hitSlop={6}
-              style={styles.profileBtn}
-            >
-              {initial ? (
-                <Text variant="smallMedium" style={{ color: '#3D4460' }}>
-                  {initial}
-                </Text>
-              ) : (
-                <Feather name="user" size={17} color="#3D4460" />
-              )}
-            </Pressable>
-          </View>
-
-          {/* ---- Search bar ---- */}
-          <Pressable
-            onPress={() => router.push('/(tabs)/shop')}
-            style={styles.searchBar}
-          >
-            <Text variant="body" style={styles.searchPlaceholder}>
-              Search for..
-            </Text>
-            <Feather name="search" size={18} color="#9CA3AF" />
-          </Pressable>
-
           {/* ---- Illustration zone ---- */}
           <View style={styles.heroIllustration}>
             {/* Fishing background — covers the full width, faded */}
@@ -300,7 +371,7 @@ export default function HomeScreen() {
                   at 6am.
                 </Text>
               ) : (
-                <ScrollView bounces={false}>
+                <Animated.ScrollView bounces={false}>
                   <SlotPicker
                     slots={slotList.data}
                     selectedKey={shownSlot?.key ?? null}
@@ -309,7 +380,7 @@ export default function HomeScreen() {
                       setSlotSheetOpen(false);
                     }}
                   />
-                </ScrollView>
+                </Animated.ScrollView>
               )}
             </View>
           </View>
@@ -319,7 +390,7 @@ export default function HomeScreen() {
         {data.categories.length > 0 ? (
           <View style={styles.section}>
             <SectionHeader title="Shop the counter" />
-            <ScrollView
+            <Animated.ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.rail}
@@ -336,7 +407,7 @@ export default function HomeScreen() {
                   }
                 />
               ))}
-            </ScrollView>
+            </Animated.ScrollView>
           </View>
         ) : null}
 
@@ -348,7 +419,7 @@ export default function HomeScreen() {
               caption="Landed this morning at Sassoon Dock"
               onSeeAll={() => router.push('/(tabs)/shop')}
             />
-            <ScrollView
+            <Animated.ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.rail}
@@ -356,7 +427,7 @@ export default function HomeScreen() {
               {data.todaysCatch.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
-            </ScrollView>
+            </Animated.ScrollView>
           </View>
         ) : null}
 
@@ -398,7 +469,7 @@ export default function HomeScreen() {
             ))}
           </View>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       <CartBar offset={TAB_BAR_CLEARANCE - 46} />
     </Screen>
@@ -441,6 +512,21 @@ function SectionHeader({
 
 /* ================================================================ styles */
 const styles = StyleSheet.create({
+  /* ------ Sticky header (address bar + search bar) ------ */
+  stickySearchWrap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    // elevation and shadowOpacity are animated via inline style
+  },
+
   /* ------ NEW hero styles ------ */
   hero: {
     overflow: 'hidden',
@@ -451,7 +537,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
     gap: 12,
   },
   deliverChip: {
@@ -496,22 +581,16 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
+    gap: 10,
     paddingHorizontal: 16,
     paddingVertical: 13,
     borderRadius: radii.xl,
     backgroundColor: HERO_SEARCH_BG,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: HERO_SEARCH_BORDER,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
   },
   searchPlaceholder: {
+    flex: 1,
     color: '#9CA3AF',
     fontFamily: fonts.body,
     fontSize: 14,
