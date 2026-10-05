@@ -19,6 +19,7 @@ import {
   useUpdateAddress,
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
+import { useUserLocation } from '@/hooks/useUserLocation';
 import { radii, spacing } from '@/constants/colors';
 import { apiErrorMessage } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
@@ -34,6 +35,7 @@ export default function AddressesScreen() {
   const insets = useSafeAreaInsets();
   const { isSignedIn } = useAuth();
   const queryClient = useQueryClient();
+  const { detectedLocation } = useUserLocation();
   const [error, setError] = useState<string | null>(null);
 
   const addresses = useListAddresses({
@@ -43,6 +45,15 @@ export default function AddressesScreen() {
   const deleteAddress = useDeleteAddress();
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['addresses'] });
+
+  const handleAddNew = () => {
+    router.push({
+      pathname: '/address-form',
+      params: detectedLocation
+        ? { area: detectedLocation.area, pincode: detectedLocation.pincode }
+        : undefined,
+    });
+  };
 
   const makeDefault = async (address: Address) => {
     setError(null);
@@ -117,7 +128,7 @@ export default function AddressesScreen() {
           title="No addresses saved"
           body="Add the place we should bring your ice box."
           actionLabel="Add an address"
-          onAction={() => router.push('/address-form')}
+          onAction={handleAddNew}
         />
       ) : (
         <ScrollView
@@ -208,7 +219,7 @@ export default function AddressesScreen() {
             label="Add another address"
             variant="outline"
             fullWidth
-            onPress={() => router.push('/address-form')}
+            onPress={handleAddNew}
           />
         </View>
       ) : null}
