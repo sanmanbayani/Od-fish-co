@@ -370,7 +370,7 @@ export default function HomeScreen() {
               <View
                 style={[styles.sheetHandle, { backgroundColor: colors.border }]}
               />
-              <Text variant="section">Delivery slots</Text>
+              <Text variant="section">Choose Delivery Slot</Text>
               <Text variant="body" tone="muted" style={styles.sheetSub}>
                 Pick when the catch should reach you — it will already be
                 selected at checkout.
@@ -391,13 +391,15 @@ export default function HomeScreen() {
                   at 6am.
                 </Text>
               ) : (
-                <Animated.ScrollView bounces={false}>
+                <Animated.ScrollView bounces={false} showsVerticalScrollIndicator={false}>
                   <SlotPicker
                     slots={slotList.data}
                     selectedKey={shownSlot?.key ?? null}
                     onSelect={(s) => {
                       setPreferredSlot(s);
-                      setSlotSheetOpen(false);
+                      setTimeout(() => {
+                        setSlotSheetOpen(false);
+                      }, 180);
                     }}
                   />
                 </Animated.ScrollView>
