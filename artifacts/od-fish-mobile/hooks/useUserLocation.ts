@@ -53,8 +53,16 @@ export function formatLocationAddress(geo: Location.LocationGeocodedAddress): {
   return { label, area, city: city || undefined, pincode };
 }
 
+let memoryCachedLocation: DetectedLocation | null = null;
+
+export function getCachedUserLocation(): DetectedLocation | null {
+  return memoryCachedLocation;
+}
+
 export function useUserLocation(enabled: boolean = true) {
-  const [detectedLocation, setDetectedLocation] = useState<DetectedLocation | null>(null);
+  const [detectedLocation, setDetectedLocation] = useState<DetectedLocation | null>(
+    memoryCachedLocation
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [permissionGranted, setPermissionGranted] = useState(false);
   const hasRequestedRef = useRef(false);
@@ -66,7 +74,8 @@ export function useUserLocation(enabled: boolean = true) {
         if (cached) {
           try {
             const parsed = JSON.parse(cached) as DetectedLocation;
-            setDetectedLocation(parsed);
+            memoryCachedLocation = parsed;
+            setDetectedLocation((prev) => prev ?? parsed);
           } catch {
             // Ignore parse errors
           }
@@ -120,6 +129,7 @@ export function useUserLocation(enabled: boolean = true) {
             longitude,
           };
 
+          memoryCachedLocation = locationData;
           setDetectedLocation(locationData);
           await AsyncStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify(locationData)).catch(
             () => {},

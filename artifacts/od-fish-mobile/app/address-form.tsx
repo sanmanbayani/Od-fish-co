@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
@@ -11,6 +11,7 @@ import {
   useUpdateAddress,
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
+import { useUserLocation } from '@/hooks/useUserLocation';
 import { radii, spacing } from '@/constants/colors';
 import { apiErrorMessage } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
@@ -32,6 +33,9 @@ export default function AddressFormScreen() {
   const { customer, isSignedIn } = useAuth();
   const queryClient = useQueryClient();
   const isEdit = Boolean(id);
+  const { detectedLocation } = useUserLocation(!isEdit);
+  const userEditedAreaRef = useRef(false);
+  const userEditedPincodeRef = useRef(false);
 
   const addresses = useListAddresses({
     query: { queryKey: ['addresses'], enabled: isSignedIn },
@@ -44,8 +48,10 @@ export default function AddressFormScreen() {
   const [receiverPhone, setReceiverPhone] = useState('');
   const [line1, setLine1] = useState('');
   const [line2, setLine2] = useState('');
-  const [area, setArea] = useState('');
-  const [pincode, setPincode] = useState('');
+  const [area, setArea] = useState(initialArea ?? (!isEdit ? detectedLocation?.area ?? '' : ''));
+  const [pincode, setPincode] = useState(
+    initialPincode ?? (!isEdit ? detectedLocation?.pincode ?? '' : '')
+  );
   const [isDefault, setIsDefault] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -65,8 +71,11 @@ export default function AddressFormScreen() {
     if (!isEdit) {
       setReceiverName(customer?.fullName ?? '');
       setReceiverPhone(customer?.phone ?? '');
-      if (initialArea) setArea(initialArea);
-      if (initialPincode) setPincode(initialPincode);
+      const defaultArea = initialArea || detectedLocation?.area;
+      const defaultPincode = initialPincode || detectedLocation?.pincode;
+      if (defaultArea && !userEditedAreaRef.current) setArea((prev) => prev || defaultArea);
+      if (defaultPincode && !userEditedPincodeRef.current)
+        setPincode((prev) => prev || defaultPincode);
       setHydrated(true);
       return;
     }
@@ -81,7 +90,19 @@ export default function AddressFormScreen() {
     setPincode(existing.pincode);
     setIsDefault(existing.isDefault);
     setHydrated(true);
-  }, [hydrated, isEdit, id, addresses.data, customer]);
+  }, [hydrated, isEdit, id, addresses.data, customer, initialArea, initialPincode, detectedLocation]);
+
+  // Pre-fill area and pincode from detected location once available, unless the user already entered them
+  useEffect(() => {
+    if (isEdit) return;
+
+    if (!userEditedAreaRef.current && !area && detectedLocation?.area) {
+      setArea(detectedLocation.area);
+    }
+    if (!userEditedPincodeRef.current && !pincode && detectedLocation?.pincode) {
+      setPincode(detectedLocation.pincode);
+    }
+  }, [isEdit, detectedLocation, area, pincode]);
 
   const validate = () => {
     const next: Record<string, string> = {};
@@ -216,7 +237,10 @@ export default function AddressFormScreen() {
           keyboardType="number-pad"
           maxLength={6}
           value={pincode}
-          onChangeText={(t) => setPincode(t.replace(/\D/g, ''))}
+          onChangeText={(t) => {
+            userEditedPincodeRef.current = true;
+            setPincode(t.replace(/\D/g, ''));
+          }}
           error={errors.pincode}
           hint={
             serviceability.isError && pincode.length === 6
@@ -248,7 +272,10 @@ export default function AddressFormScreen() {
           label="Area"
           placeholder="Bandra West"
           value={area}
-          onChangeText={setArea}
+          onChangeText={(t) => {
+            userEditedAreaRef.current = true;
+            setArea(t);
+          }}
           error={errors.area}
         />
 

@@ -13,6 +13,7 @@ import {
   usePayOrder,
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
+import { useUserLocation } from '@/hooks/useUserLocation';
 import { radii, spacing } from '@/constants/colors';
 import { apiErrorMessage, rupees } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
@@ -52,6 +53,16 @@ export default function CheckoutScreen() {
   const insets = useSafeAreaInsets();
   const { isSignedIn, customer } = useAuth();
   const queryClient = useQueryClient();
+  const { detectedLocation } = useUserLocation();
+
+  const handleAddNewAddress = () => {
+    router.push({
+      pathname: '/address-form',
+      params: detectedLocation
+        ? { area: detectedLocation.area, pincode: detectedLocation.pincode }
+        : undefined,
+    });
+  };
 
   const cart = useGetCart({ query: { queryKey: ['cart'], enabled: isSignedIn } });
   const addresses = useListAddresses({
@@ -235,7 +246,7 @@ export default function CheckoutScreen() {
         <View>
           <View style={styles.sectionHead}>
             <Text variant="section">Deliver to</Text>
-            <Pressable onPress={() => router.push('/address-form')} hitSlop={8}>
+            <Pressable onPress={handleAddNewAddress} hitSlop={8}>
               <Text variant="smallMedium" tone="primary">
                 + Add new
               </Text>
@@ -250,7 +261,7 @@ export default function CheckoutScreen() {
               <Button
                 label="Add an address"
                 size="md"
-                onPress={() => router.push('/address-form')}
+                onPress={handleAddNewAddress}
                 style={styles.addBtn}
               />
             </Card>
