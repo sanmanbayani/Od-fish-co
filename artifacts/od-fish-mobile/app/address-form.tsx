@@ -27,7 +27,8 @@ const LABELS = ['Home', 'Work', 'Other'];
 export default function AddressFormScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id, area: initialArea, pincode: initialPincode } =
+    useLocalSearchParams<{ id?: string; area?: string; pincode?: string }>();
   const { customer, isSignedIn } = useAuth();
   const queryClient = useQueryClient();
   const isEdit = Boolean(id);
@@ -64,6 +65,8 @@ export default function AddressFormScreen() {
     if (!isEdit) {
       setReceiverName(customer?.fullName ?? '');
       setReceiverPhone(customer?.phone ?? '');
+      if (initialArea) setArea(initialArea);
+      if (initialPincode) setPincode(initialPincode);
       setHydrated(true);
       return;
     }

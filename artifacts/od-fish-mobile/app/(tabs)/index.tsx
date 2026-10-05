@@ -25,6 +25,7 @@ import { fonts } from '@/constants/typography';
 import { countdown, deliveryDate } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
 import { setPreferredSlot, usePreferredSlot } from '@/lib/preferredSlot';
+import { useUserLocation } from '@/hooks/useUserLocation';
 import { CartBar } from '@/components/CartBar';
 import { CategoryTile } from '@/components/CategoryTile';
 import { ProductCard } from '@/components/ProductCard';
@@ -50,6 +51,7 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const gridWidth = Math.min((width - spacing.lg * 2 - 12) / 2, 260);
   const { customer } = useAuth();
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   const feed = useGetHomeFeed({
     query: { queryKey: ['home'], refetchInterval: CATALOGUE_POLL_MS },
@@ -82,16 +84,35 @@ export default function HomeScreen() {
     if (!stillOpen) setPreferredSlot(null);
   }, [slotSheetOpen, slotList.data, preferredSlot]);
   const deliverTo = addresses.data?.find((a) => a.isDefault) ?? addresses.data?.[0];
-  const locationLabel = !customer
-    ? 'Set your location'
-    : addresses.isLoading
-      ? 'Finding your address…'
-      : deliverTo
-        ? deliverTo.area
-        : addresses.isError
-          ? 'Mumbai'
-          : 'Add delivery address';
+  const hasSavedAddress = Boolean(deliverTo);
+  const { detectedLocation, isLoading: isDetectingLocation } = useUserLocation(!hasSavedAddress);
+
+  const locationLabel = deliverTo
+    ? deliverTo.area
+    : detectedLocation
+      ? detectedLocation.label
+      : isDetectingLocation
+        ? 'Locating…'
+        : 'Add delivery address';
+
   const initial = customer?.fullName?.trim()?.[0]?.toUpperCase() ?? null;
+
+  const handleAddressPress = () => {
+    if (!customer) {
+      router.push('/login');
+      return;
+    }
+    if (addresses.data && addresses.data.length > 0) {
+      router.push('/addresses');
+      return;
+    }
+    router.push({
+      pathname: '/address-form',
+      params: detectedLocation
+        ? { area: detectedLocation.area, pincode: detectedLocation.pincode }
+        : undefined,
+    });
+  };
 
   const onRefresh = useCallback(() => {
     feed.refetch();
@@ -129,7 +150,6 @@ export default function HomeScreen() {
       : null) ?? (preferredSlot ? 'Your slot' : null);
 
   /* ---- Scroll-driven sticky header ---- */
-  const scrollY = useRef(new Animated.Value(0)).current;
 
   // Background: transparent → white as user scrolls
   const stickyBg = scrollY.interpolate({
@@ -193,7 +213,7 @@ export default function HomeScreen() {
           ]}
         >
           <Pressable
-            onPress={() => router.push(customer ? '/addresses' : '/login')}
+            onPress={handleAddressPress}
             hitSlop={6}
             style={styles.deliverChip}
           >
