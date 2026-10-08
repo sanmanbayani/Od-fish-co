@@ -249,9 +249,6 @@ export default function Storefront() {
                     <div className="flex justify-between items-start mb-4 gap-4">
                       <div className="flex-1 min-w-0">
                         <h3 className="text-2xl font-bold font-serif text-primary truncate">{product.name}</h3>
-                        {product.nameLocal && (
-                          <p className="text-base text-muted-foreground italic mt-1 truncate">{product.nameLocal}</p>
-                        )}
                       </div>
                       <div className="text-right shrink-0">
                         <span className="text-xs font-medium text-muted-foreground block mb-1 uppercase tracking-wider">Starts at</span>

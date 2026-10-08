@@ -27,7 +27,7 @@ import { useAuth } from '@/lib/auth';
 import { setPreferredSlot, usePreferredSlot } from '@/lib/preferredSlot';
 import { useUserLocation } from '@/hooks/useUserLocation';
 import { CartBar } from '@/components/CartBar';
-import { CategoryTile } from '@/components/CategoryTile';
+import { CategoryNav } from '@/components/CategoryTile';
 import { ProductCard } from '@/components/ProductCard';
 import { SlotPicker, slotKey } from '@/components/SlotPicker';
 import { Text } from '@/components/ui/Text';
@@ -52,6 +52,31 @@ export default function HomeScreen() {
   const gridWidth = Math.min((width - spacing.lg * 2 - 12) / 2, 260);
   const { customer } = useAuth();
   const scrollY = useRef(new Animated.Value(0)).current;
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [dockThreshold, setDockThreshold] = useState<number>(360);
+  const [isDocked, setIsDocked] = useState<boolean>(false);
+
+  useEffect(() => {
+    const id = scrollY.addListener(({ value }) => {
+      const docked = value >= dockThreshold;
+      setIsDocked((prev) => (prev !== docked ? docked : prev));
+    });
+    return () => {
+      scrollY.removeListener(id);
+    };
+  }, [dockThreshold, scrollY]);
+
+  const handleCategorySelect = (slug: string) => {
+    setSelectedCategory(slug);
+    if (slug === 'all') {
+      router.push('/(tabs)/shop');
+    } else {
+      router.push({
+        pathname: '/(tabs)/shop',
+        params: { category: slug },
+      });
+    }
+  };
 
   const feed = useGetHomeFeed({
     query: { queryKey: ['home'], refetchInterval: CATALOGUE_POLL_MS },
@@ -186,9 +211,31 @@ export default function HomeScreen() {
     extrapolate: 'clamp',
   });
 
+  // Docked category bar animations (stacks below search bar as scroll happens)
+  const dockedOpacity = scrollY.interpolate({
+    inputRange: [Math.max(0, dockThreshold - 15), dockThreshold],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+  const dockedHeight = scrollY.interpolate({
+    inputRange: [Math.max(0, dockThreshold - 15), dockThreshold],
+    outputRange: [0, 68],
+    extrapolate: 'clamp',
+  });
+  const dockedTranslateY = scrollY.interpolate({
+    inputRange: [Math.max(0, dockThreshold - 15), dockThreshold],
+    outputRange: [-4, 0],
+    extrapolate: 'clamp',
+  });
+  const inlineOpacity = scrollY.interpolate({
+    inputRange: [Math.max(0, dockThreshold - 1), dockThreshold],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
   return (
     <Screen>
-      {/* ---- Sticky header: address bar + search bar ---- */}
+      {/* ---- Sticky header: address bar + search bar + categories stacked on scroll ---- */}
       <Animated.View
         style={[
           styles.stickySearchWrap,
@@ -200,69 +247,92 @@ export default function HomeScreen() {
           },
         ]}
       >
-        {/* Address bar — collapses on scroll */}
-        <Animated.View
-          style={[
-            styles.heroTopBar,
-            {
-              height: addressBarHeight,
-              opacity: addressBarOpacity,
-              marginBottom: addressBarMargin,
-              overflow: 'hidden',
-            },
-          ]}
-        >
-          <Pressable
-            onPress={handleAddressPress}
-            hitSlop={6}
-            style={styles.deliverChip}
+        <View style={styles.stickyTopContent}>
+          {/* Address bar — collapses on scroll */}
+          <Animated.View
+            style={[
+              styles.heroTopBar,
+              {
+                height: addressBarHeight,
+                opacity: addressBarOpacity,
+                marginBottom: addressBarMargin,
+                overflow: 'hidden',
+              },
+            ]}
           >
-            <View style={styles.deliverIcon}>
-              <Feather name="map-pin" size={15} color="#FFFFFF" />
-            </View>
-            <View style={styles.deliverStack}>
-              <Text variant="tiny" uppercase style={styles.deliverKicker}>
-                Deliver to
-              </Text>
-              <Text
-                variant="smallMedium"
-                numberOfLines={1}
-                style={styles.deliverName}
-              >
-                {locationLabel}
-              </Text>
-            </View>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push('/(tabs)/account')}
-            hitSlop={6}
-            style={styles.profileBtn}
-          >
-            {initial ? (
-              <Text variant="smallMedium" style={{ color: '#3D4460' }}>
-                {initial}
-              </Text>
-            ) : (
-              <Feather name="user" size={17} color="#3D4460" />
-            )}
-          </Pressable>
-        </Animated.View>
+            <Pressable
+              onPress={handleAddressPress}
+              hitSlop={6}
+              style={styles.deliverChip}
+            >
+              <View style={styles.deliverIcon}>
+                <Feather name="map-pin" size={15} color="#FFFFFF" />
+              </View>
+              <View style={styles.deliverStack}>
+                <Text variant="tiny" uppercase style={styles.deliverKicker}>
+                  Deliver to
+                </Text>
+                <Text
+                  variant="smallMedium"
+                  numberOfLines={1}
+                  style={styles.deliverName}
+                >
+                  {locationLabel}
+                </Text>
+              </View>
+            </Pressable>
+            <Pressable
+              onPress={() => router.push('/(tabs)/account')}
+              hitSlop={6}
+              style={styles.profileBtn}
+            >
+              {initial ? (
+                <Text variant="smallMedium" style={{ color: '#3D4460' }}>
+                  {initial}
+                </Text>
+              ) : (
+                <Feather name="user" size={17} color="#3D4460" />
+              )}
+            </Pressable>
+          </Animated.View>
 
-        {/* Search bar */}
-        <Pressable
-          onPress={() =>
-            router.push({
-              pathname: '/(tabs)/shop',
-              params: { autofocus: Date.now().toString() },
-            })
-          }
-          style={styles.searchBar}
-        >
-          <Feather name="search" size={18} color="#9CA3AF" />
-          <Text variant="body" style={styles.searchPlaceholder}>
-            Search for..
-          </Text>
-        </Pressable>
+          {/* Search bar */}
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: '/(tabs)/shop',
+                params: { autofocus: Date.now().toString() },
+              })
+            }
+            style={styles.searchBar}
+          >
+            <Feather name="search" size={18} color="#9CA3AF" />
+            <Text variant="body" style={styles.searchPlaceholder}>
+              Search for..
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* Categories stacked below search bar in sticky header */}
+        {data.categories.length > 0 ? (
+          <Animated.View
+            style={[
+              styles.dockedCategoryWrap,
+              {
+                height: dockedHeight,
+                opacity: dockedOpacity,
+                transform: [{ translateY: dockedTranslateY }],
+              },
+            ]}
+            pointerEvents={isDocked ? 'auto' : 'none'}
+          >
+            <CategoryNav
+              categories={data.categories}
+              selectedSlug={selectedCategory}
+              onSelect={handleCategorySelect}
+            />
+          </Animated.View>
+        ) : null}
       </Animated.View>
 
       <Animated.ScrollView
@@ -408,29 +478,27 @@ export default function HomeScreen() {
           </View>
         </Modal>
 
-        {/* Categories */}
+        {/* Quick-Commerce Category Bar (Inline, smoothly docks below search bar on scroll) */}
         {data.categories.length > 0 ? (
-          <View style={styles.section}>
-            <SectionHeader title="Shop the counter" />
-            <Animated.ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.rail}
-            >
-              {data.categories.map((category) => (
-                <CategoryTile
-                  key={category.id}
-                  category={category}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/(tabs)/shop',
-                      params: { category: category.slug },
-                    })
-                  }
-                />
-              ))}
-            </Animated.ScrollView>
-          </View>
+          <Animated.View
+            onLayout={(e) => {
+              const y = e.nativeEvent.layout.y;
+              const headerBottom = insets.top + spacing.sm + 46 + spacing.sm;
+              if (y > 100) {
+                setDockThreshold(Math.max(100, y - headerBottom));
+              }
+            }}
+            style={[
+              styles.categorySection,
+              { opacity: inlineOpacity },
+            ]}
+          >
+            <CategoryNav
+              categories={data.categories}
+              selectedSlug={selectedCategory}
+              onSelect={handleCategorySelect}
+            />
+          </Animated.View>
         ) : null}
 
         {/* Today's catch */}
@@ -534,19 +602,25 @@ function SectionHeader({
 
 /* ================================================================ styles */
 const styles = StyleSheet.create({
-  /* ------ Sticky header (address bar + search bar) ------ */
+  /* ------ Sticky header (address bar + search bar + categories) ------ */
   stickySearchWrap: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     zIndex: 10,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 6,
     // elevation and shadowOpacity are animated via inline style
+  },
+  stickyTopContent: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  dockedCategoryWrap: {
+    width: '100%',
+    overflow: 'hidden',
   },
 
   /* ------ NEW hero styles ------ */
@@ -699,6 +773,7 @@ const styles = StyleSheet.create({
   },
   sheetSub: { marginTop: 4, marginBottom: spacing.md },
   sheetBusy: { marginVertical: spacing.lg },
+  categorySection: { marginTop: spacing.md },
   section: { marginTop: spacing.xl, paddingHorizontal: spacing.lg },
   sectionHeader: { marginBottom: spacing.md },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

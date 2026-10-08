@@ -21,7 +21,6 @@ import { STUDIO_PREVIEWS } from '@/constants/studioPreviews';
 import {
   apiErrorMessage,
   cutLabel,
-  discountPercent,
   grams,
   netWeightRange,
   rupees,
@@ -105,7 +104,6 @@ export default function ProductScreen() {
 
   const item = product.data;
   const selected = variants.find((v) => v.id === variantId) ?? null;
-  const off = selected ? discountPercent(selected.mrpPaise, selected.pricePaise) : null;
   const soldOut = !selected || selected.stockQty <= 0;
 
   const onAdd = async () => {
@@ -135,20 +133,12 @@ export default function ProductScreen() {
             contentFit="cover"
             transition={200}
           />
-          {off ? (
-            <Badge label={`${off}% off`} tone="danger" style={styles.heroBadge} />
-          ) : null}
         </View>
 
         <View style={styles.body}>
           <View style={styles.titleRow}>
             <View style={styles.flex}>
               <Text variant="title">{item.name}</Text>
-              {item.nameLocal ? (
-                <Text variant="body" tone="muted" style={styles.local}>
-                  {item.nameLocal}
-                </Text>
-              ) : null}
             </View>
             <Badge
               label={item.inStock ? 'Fresh today' : 'Sold out'}
@@ -393,11 +383,9 @@ function WeightRow({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   hero: { width: '100%' },
   heroImage: { width: '100%', height: '100%' },
-  heroBadge: { position: 'absolute', top: 14, left: 14 },
   body: { padding: spacing.lg },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   flex: { flex: 1 },
-  local: { marginTop: 2 },
   desc: { marginTop: spacing.md, lineHeight: 21 },
   originRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
   sectionTitle: { marginTop: spacing.xl, marginBottom: spacing.md },

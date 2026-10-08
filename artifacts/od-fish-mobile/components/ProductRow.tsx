@@ -8,7 +8,7 @@ import { useColors } from '@/hooks/useColors';
 import { overlay, radii } from '@/constants/colors';
 import { mediaUrl } from '@/lib/api';
 import { STUDIO_PREVIEWS } from '@/constants/studioPreviews';
-import { cutLabel, discountPercent, rupees } from '@/lib/format';
+import { cutLabel, rupees } from '@/lib/format';
 import { Text } from '@/components/ui/Text';
 import { Badge } from '@/components/ui/Badge';
 
@@ -17,7 +17,6 @@ export function ProductRow({ product }: { product: Product }) {
   const colors = useColors();
   const active = product.variants.filter((v) => v.isActive);
   const cheapest = [...active].sort((a, b) => a.pricePaise - b.pricePaise)[0];
-  const off = cheapest ? discountPercent(cheapest.mrpPaise, cheapest.pricePaise) : null;
   const multiPack = active.length > 1;
 
   return (
@@ -48,13 +47,7 @@ export function ProductRow({ product }: { product: Product }) {
           <Text variant="cardTitle" numberOfLines={1} style={styles.flex}>
             {product.name}
           </Text>
-          {off ? <Badge label={`${off}%`} tone="danger" /> : null}
         </View>
-        {product.nameLocal ? (
-          <Text variant="small" tone="muted" numberOfLines={1}>
-            {product.nameLocal}
-          </Text>
-        ) : null}
         {cheapest ? (
           <Text variant="tiny" tone="muted" numberOfLines={1} style={styles.meta}>
             {/* With several sizes on offer, naming just one pack is misleading

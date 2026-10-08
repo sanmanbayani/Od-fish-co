@@ -7,7 +7,7 @@ import { useColors } from '@/hooks/useColors';
 import { overlay, radii } from '@/constants/colors';
 import { mediaUrl } from '@/lib/api';
 import { STUDIO_PREVIEWS } from '@/constants/studioPreviews';
-import { discountPercent, rupees } from '@/lib/format';
+import { rupees } from '@/lib/format';
 import { Text } from '@/components/ui/Text';
 import { Badge } from '@/components/ui/Badge';
 
@@ -23,7 +23,6 @@ export function ProductCard({
   const cheapest = product.variants
     .filter((v) => v.isActive)
     .sort((a, b) => a.pricePaise - b.pricePaise)[0];
-  const off = cheapest ? discountPercent(cheapest.mrpPaise, cheapest.pricePaise) : null;
 
   return (
     <Pressable
@@ -46,9 +45,6 @@ export function ProductCard({
           contentFit="cover"
           transition={180}
         />
-        {off ? (
-          <Badge label={`${off}% off`} tone="danger" style={styles.offBadge} />
-        ) : null}
         {!product.inStock ? (
           <View style={styles.soldOutVeil}>
             <Badge label="Sold out" tone="navy" />
@@ -59,11 +55,6 @@ export function ProductCard({
         <Text variant="cardTitle" numberOfLines={1}>
           {product.name}
         </Text>
-        {product.nameLocal ? (
-          <Text variant="small" tone="muted" numberOfLines={1} style={styles.local}>
-            {product.nameLocal}
-          </Text>
-        ) : null}
         <View style={styles.priceRow}>
           <Text variant="price">{rupees(product.fromPricePaise ?? cheapest?.pricePaise)}</Text>
           {cheapest && cheapest.mrpPaise > cheapest.pricePaise ? (
@@ -89,7 +80,6 @@ const styles = StyleSheet.create({
   },
   imageWrap: { aspectRatio: 1.12, width: '100%' },
   image: { width: '100%', height: '100%' },
-  offBadge: { position: 'absolute', top: 8, left: 8 },
   soldOutVeil: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: overlay.scrim,
@@ -97,7 +87,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   body: { padding: 10, gap: 2 },
-  local: { marginBottom: 2 },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 2 },
   strike: { textDecorationLine: 'line-through' },
 });
