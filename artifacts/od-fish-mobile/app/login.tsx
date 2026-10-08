@@ -1,5 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Animated,
+  Easing,
+  Pressable,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,18 +14,19 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { useRequestOtp, useVerifyOtp } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
-import { overlay, radii, spacing } from '@/constants/colors';
+import { deepInk, mint, overlay, radii, spacing } from '@/constants/colors';
 import { fonts } from '@/constants/typography';
 import { apiErrorMessage } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
 import { supabase, supabaseConfigured } from '@/lib/supabase';
 import { API_BASE_URL } from '@/lib/api';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
-import { BrandMark } from '@/components/BrandMark';
+import { LogoGlyph } from '@/components/BrandMark';
+import { GoogleMark } from '@/components/GoogleMark';
 import { Text } from '@/components/ui/Text';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
-import { Screen } from '@/components/ui/Screen';
+import { OtpInput } from '@/components/ui/OtpInput';
 
 export default function LoginScreen() {
   const colors = useColors();
@@ -37,6 +45,23 @@ export default function LoginScreen() {
 
   const requestOtp = useRequestOtp();
   const verifyOtp = useVerifyOtp();
+
+  /**
+   * The two steps live on one screen and cross-fade, rather than being separate
+   * routes. Re-entering the phone step has to restore what was typed, and a
+   * push/pop would also animate the whole sheet sideways — too heavy for what is
+   * really one form in two parts.
+   */
+  const stepAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(stepAnim, {
+      toValue: step === 'phone' ? 0 : 1,
+      duration: 260,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [step, stepAnim]);
 
   useEffect(() => {
     return () => {
@@ -63,9 +88,11 @@ export default function LoginScreen() {
     else router.replace('/(tabs)');
   };
 
+  const phoneValid = /^[6-9]\d{9}$/.test(phone);
+
   const onSendOtp = async () => {
     setError(null);
-    if (!/^[6-9]\d{9}$/.test(phone)) {
+    if (!phoneValid) {
       setError('Enter a valid 10-digit Indian mobile number.');
       return;
     }
@@ -73,6 +100,7 @@ export default function LoginScreen() {
       const challenge = await requestOtp.mutateAsync({ data: { phone } });
       setDevOtp(challenge.devOtp ?? null);
       setMockAuth(Boolean(challenge.mockAuth));
+      setOtp('');
       setStep('otp');
       startCountdown(challenge.expiresInSeconds || 300);
     } catch (err) {
@@ -187,74 +215,111 @@ export default function LoginScreen() {
     }
   };
 
+  const headline = useMemo(
+    () =>
+      step === 'phone'
+        ? 'The catch of the\nday, at your door.'
+        : `Enter the code\nwe just sent.`,
+    [step],
+  );
+
   return (
-    <Screen tone="deep">
+    <View style={styles.root}>
       <KeyboardAwareScrollViewCompat
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + 40 },
+          { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + 32 },
         ]}
         keyboardShouldPersistTaps="handled"
-        bottomOffset={72}
+        bottomOffset={96}
+        showsVerticalScrollIndicator={false}
       >
+        {/* ----------------------------- masthead ---------------------------- */}
         <View style={styles.topRow}>
-          <BrandMark size={38} showWordmark={false} />
+          {/* `mint`, not the default navy — the mark sits on the deep band here
+              and a navy glyph on navy is invisible. */}
+          <View style={styles.brandRow}>
+            <LogoGlyph width={34} color={mint} />
+            <Text style={styles.brandWord}>OD Fish Co.</Text>
+          </View>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Close"
             onPress={close}
-            hitSlop={12}
+            hitSlop={14}
             style={[styles.close, { borderColor: overlay.hairline }]}
           >
-            <Feather name="x" size={17} color={colors.deepForeground} />
+            <Feather name="x" size={17} color="#F8F6F1" />
           </Pressable>
         </View>
 
-        <Text variant="hero" tone="inverse" style={styles.headline}>
-          {step === 'phone' ? 'The catch of the\nday, at your door.' : 'Enter the code'}
-        </Text>
-        <Text style={[styles.sub, { color: overlay.mutedForeground }]} variant="body">
-          {step === 'phone'
-            ? 'Sign in with your mobile number. No password to remember.'
-            : `We sent a 6-digit code to +91 ${phone}.`}
-        </Text>
+        <View style={styles.hero}>
+          {step === 'otp' ? (
+            <Pressable
+              onPress={() => {
+                setStep('phone');
+                setOtp('');
+                setError(null);
+              }}
+              hitSlop={10}
+              style={styles.backRow}
+            >
+              <Feather name="arrow-left" size={15} color={mint} />
+              <Text style={styles.backLabel}>+91 {phone}</Text>
+            </Pressable>
+          ) : (
+            <Text style={styles.kicker}>SIGN IN OR CREATE AN ACCOUNT</Text>
+          )}
 
-        <View
-          style={[
-            styles.sheet,
-            { backgroundColor: colors.background, borderRadius: radii.xl },
-          ]}
-        >
+          <Text style={styles.headline}>{headline}</Text>
+          <Text style={styles.sub}>
+            {step === 'phone'
+              ? 'One number, no password. We use it for order updates and to let your rider reach you.'
+              : 'Six digits, valid for five minutes.'}
+          </Text>
+        </View>
+
+        {/* ------------------------------- sheet ---------------------------- */}
+        <View style={[styles.sheet, { backgroundColor: colors.background }]}>
           {step === 'phone' ? (
-            <>
+            <Animated.View
+              style={{
+                opacity: stepAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 0],
+                }),
+              }}
+            >
               {supabaseConfigured ? (
                 <>
                   <Pressable
                     onPress={onGoogleSignIn}
                     disabled={googleLoading}
+                    accessibilityRole="button"
                     style={({ pressed }) => [
                       styles.googleBtn,
                       {
                         backgroundColor: colors.card,
                         borderColor: colors.border,
-                        borderRadius: radii.lg,
-                        opacity: pressed ? 0.9 : 1,
+                        opacity: googleLoading ? 0.6 : pressed ? 0.9 : 1,
                       },
                     ]}
                   >
                     {googleLoading ? (
                       <ActivityIndicator size="small" color={colors.foreground} />
                     ) : (
-                      <Feather name="chrome" size={18} color={colors.foreground} />
+                      <GoogleMark size={18} />
                     )}
-                    <Text variant="bodyMedium" style={styles.googleLabel}>
+                    <Text variant="bodySemi" style={styles.googleLabel}>
                       Continue with Google
                     </Text>
                   </Pressable>
 
                   <View style={styles.dividerRow}>
                     <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-                    <Text variant="small" tone="muted" style={styles.dividerText}>or</Text>
+                    <Text variant="small" tone="muted">
+                      or use your mobile
+                    </Text>
                     <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
                   </View>
                 </>
@@ -271,14 +336,21 @@ export default function LoginScreen() {
                 onSubmitEditing={onSendOtp}
                 maxLength={10}
                 value={phone}
-                onChangeText={(t) => setPhone(t.replace(/\D/g, ''))}
+                onChangeText={(t) => {
+                  setPhone(t.replace(/\D/g, ''));
+                  if (error) setError(null);
+                }}
                 error={error}
                 autoFocus
+                style={styles.phoneInput}
               />
               <Button
                 label="Send OTP"
                 onPress={onSendOtp}
                 loading={requestOtp.isPending}
+                // Disabled until the number is plausible, so the error state is
+                // something you have to work at rather than the default.
+                disabled={!phoneValid}
                 size="lg"
                 fullWidth
                 style={styles.action}
@@ -287,35 +359,25 @@ export default function LoginScreen() {
                 By continuing you agree to our terms of service and privacy
                 policy. We only use your number for order updates.
               </Text>
-            </>
+            </Animated.View>
           ) : (
-            <>
-              <TextField
-                label="6-digit OTP"
-                placeholder="······"
-                keyboardType="number-pad"
-                textContentType="oneTimeCode"
-                autoComplete="one-time-code"
-                returnKeyType="done"
-                onSubmitEditing={() => onVerify()}
-                maxLength={6}
+            <Animated.View style={{ opacity: stepAnim }}>
+              <Text variant="label" tone="muted" uppercase style={styles.otpLabel}>
+                6-digit code
+              </Text>
+              <OtpInput
                 value={otp}
-                onChangeText={(t) => {
-                  const digits = t.replace(/\D/g, '');
-                  setOtp(digits);
-                  if (digits.length === 6) onVerify(digits);
+                onChange={(next) => {
+                  setOtp(next);
+                  if (error) setError(null);
                 }}
+                onComplete={onVerify}
                 error={error}
                 autoFocus
-                style={styles.otpInput}
               />
+
               {devOtp ? (
-                <View
-                  style={[
-                    styles.devHint,
-                    { backgroundColor: colors.accent, borderRadius: radii.md },
-                  ]}
-                >
+                <View style={[styles.hint, { backgroundColor: colors.accent }]}>
                   <Feather name="info" size={13} color={colors.mutedForeground} />
                   <Text variant="small" tone="muted" style={styles.flex}>
                     No SMS provider is live yet, so your code is{' '}
@@ -326,27 +388,25 @@ export default function LoginScreen() {
                   </Text>
                 </View>
               ) : mockAuth ? (
-                <View
-                  style={[
-                    styles.devHint,
-                    { backgroundColor: colors.accent, borderRadius: radii.md },
-                  ]}
-                >
+                <View style={[styles.hint, { backgroundColor: colors.accent }]}>
                   <Feather name="info" size={13} color={colors.mutedForeground} />
                   <Text variant="small" tone="muted" style={styles.flex}>
-                    Demo sign-in is switched on — enter the shared demo code. Real
-                    SMS goes live once mobile-number registration clears.
+                    Demo sign-in is switched on — enter the shared demo code.
+                    Real SMS goes live once mobile-number registration clears.
                   </Text>
                 </View>
               ) : null}
+
               <Button
                 label="Verify & continue"
                 onPress={() => onVerify()}
                 loading={verifyOtp.isPending}
+                disabled={otp.length !== 6}
                 size="lg"
                 fullWidth
                 style={styles.action}
               />
+
               <View style={styles.resendRow}>
                 <Pressable
                   onPress={() => {
@@ -354,6 +414,7 @@ export default function LoginScreen() {
                     setOtp('');
                     setError(null);
                   }}
+                  hitSlop={8}
                 >
                   <Text variant="smallMedium" tone="primary">
                     Change number
@@ -361,31 +422,54 @@ export default function LoginScreen() {
                 </Pressable>
                 {secondsLeft > 0 ? (
                   <Text variant="small" tone="muted">
-                    Expires in {Math.floor(secondsLeft / 60)}:
+                    Resend in {Math.floor(secondsLeft / 60)}:
                     {String(secondsLeft % 60).padStart(2, '0')}
                   </Text>
                 ) : (
-                  <Pressable onPress={onSendOtp}>
+                  <Pressable onPress={onSendOtp} hitSlop={8}>
                     <Text variant="smallMedium" tone="primary">
                       Resend OTP
                     </Text>
                   </Pressable>
                 )}
               </View>
-            </>
+            </Animated.View>
           )}
         </View>
+
+        {/* Trust strip — the reason to hand over a number at all. */}
+        <View style={styles.trust}>
+          {[
+            { icon: 'shield' as const, label: 'No password\nto remember' },
+            { icon: 'bell' as const, label: 'Order updates\nby notification' },
+            { icon: 'lock' as const, label: 'Never shared\nor sold' },
+          ].map((item) => (
+            <View key={item.icon} style={styles.trustItem}>
+              <Feather name={item.icon} size={15} color={mint} />
+              <Text style={styles.trustLabel}>{item.label}</Text>
+            </View>
+          ))}
+        </View>
       </KeyboardAwareScrollViewCompat>
-    </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: deepInk },
   scroll: { paddingHorizontal: spacing.lg, flexGrow: 1 },
+
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  brandWord: {
+    fontFamily: fonts.displayBold,
+    fontSize: 17,
+    lineHeight: 21,
+    color: '#F8F6F1',
   },
   close: {
     width: 34,
@@ -395,22 +479,79 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headline: { marginTop: spacing.xxl },
-  sub: { marginTop: spacing.sm, maxWidth: 320 },
-  sheet: { marginTop: spacing.xl, padding: spacing.lg },
+
+  hero: { marginTop: spacing.xxl },
+  kicker: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 10,
+    lineHeight: 13,
+    letterSpacing: 2,
+    color: mint,
+  },
+  backRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  backLabel: {
+    fontFamily: fonts.monoBold,
+    fontSize: 13,
+    lineHeight: 17,
+    letterSpacing: 0.4,
+    color: mint,
+  },
+  headline: {
+    fontFamily: fonts.displayBold,
+    fontSize: 30,
+    lineHeight: 36,
+    letterSpacing: -0.4,
+    color: '#F8F6F1',
+    marginTop: 10,
+  },
+  sub: {
+    fontFamily: fonts.body,
+    fontSize: 14,
+    lineHeight: 21,
+    color: overlay.mutedForeground,
+    marginTop: spacing.sm,
+    maxWidth: 330,
+  },
+
+  sheet: {
+    marginTop: spacing.xl,
+    padding: spacing.lg,
+    borderRadius: radii.xl,
+  },
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 15,
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+  },
+  googleLabel: { lineHeight: 20, fontSize: 14.5 },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginVertical: spacing.lg,
+  },
+  dividerLine: { flex: 1, height: StyleSheet.hairlineWidth },
+
+  phoneInput: {
+    fontFamily: fonts.monoBold,
+    fontSize: 17,
+    letterSpacing: 1.2,
+  },
   action: { marginTop: spacing.lg },
   legal: { marginTop: spacing.md, lineHeight: 17 },
-  otpInput: {
-    fontFamily: fonts.monoBold,
-    fontSize: 22,
-    letterSpacing: Platform.OS === 'web' ? 8 : 10,
-  },
-  devHint: {
+
+  otpLabel: { marginBottom: 10 },
+  hint: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    padding: 10,
+    padding: 11,
     marginTop: spacing.md,
+    borderRadius: radii.md,
   },
   flex: { flex: 1 },
   resendRow: {
@@ -419,27 +560,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: spacing.md,
   },
-  googleBtn: {
+
+  trust: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 14,
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    marginBottom: spacing.sm,
+    justifyContent: 'space-between',
+    marginTop: 'auto',
+    paddingTop: spacing.xl,
+    paddingHorizontal: spacing.xs,
   },
-  googleLabel: {
-    lineHeight: 20,
+  trustItem: { alignItems: 'center', gap: 7, flex: 1 },
+  trustLabel: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 10.5,
+    lineHeight: 14,
+    textAlign: 'center',
+    color: overlay.mutedForeground,
   },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginVertical: spacing.md,
-  },
-  dividerLine: {
-    flex: 1,
-    height: StyleSheet.hairlineWidth,
-  },
-  dividerText: {},
 });
