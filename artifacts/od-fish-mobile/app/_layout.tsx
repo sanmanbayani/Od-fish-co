@@ -32,6 +32,7 @@ import {
 import * as Notifications from 'expo-notifications';
 import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as WebBrowser from 'expo-web-browser';
 import { StatusBar } from 'expo-status-bar';
 import colors from '@/constants/colors';
 import { fonts } from '@/constants/typography';
@@ -40,6 +41,7 @@ import { orderIdFrom } from '@/lib/notifications';
 import { hasSeenOnboarding } from '@/lib/onboarding';
 import { BrandSplash } from '@/components/BrandSplash';
 
+WebBrowser.maybeCompleteAuthSession();
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient({
@@ -136,6 +138,10 @@ function RootLayoutNav() {
       <Stack.Screen
         name="address-form"
         options={{ presentation: 'modal', title: 'Address' }}
+      />
+      <Stack.Screen
+        name="auth-callback"
+        options={{ headerShown: false, animation: 'fade' }}
       />
       </Stack>
     </>

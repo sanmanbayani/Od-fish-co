@@ -162,13 +162,29 @@ export default function LoginScreen() {
         return;
       }
 
-      // Extract tokens from the URL hash: #access_token=...&refresh_token=...
+      // Extract tokens from the URL hash or query parameters:
       const url = new URL(result.url);
       const hashParams = new URLSearchParams(
         url.hash.startsWith('#') ? url.hash.substring(1) : url.hash,
       );
-      const accessToken = hashParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token');
+      let accessToken = hashParams.get('access_token');
+      let refreshToken = hashParams.get('refresh_token');
+      const code = hashParams.get('code') || url.searchParams.get('code');
+
+      if (!accessToken && url.searchParams) {
+        accessToken = url.searchParams.get('access_token');
+        refreshToken = refreshToken || url.searchParams.get('refresh_token');
+      }
+
+      if (!accessToken && code) {
+        const { data: codeData, error: exchangeErr } =
+          await supabase.auth.exchangeCodeForSession(code);
+        if (exchangeErr) throw exchangeErr;
+        if (codeData?.session?.access_token) {
+          accessToken = codeData.session.access_token;
+          refreshToken = codeData.session.refresh_token;
+        }
+      }
 
       if (!accessToken) {
         setError('Could not complete Google sign-in. Please try again.');
