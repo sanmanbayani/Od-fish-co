@@ -13,7 +13,7 @@ import { useColors } from '@/hooks/useColors';
 import { radii } from '@/constants/colors';
 import { Text } from '@/components/ui/Text';
 
-type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'inverse';
 type Size = 'sm' | 'md' | 'lg';
 
 export type ButtonProps = {
@@ -77,6 +77,16 @@ export function Button({
       bg: colors.destructive,
       fg: colors.destructiveForeground,
       border: colors.destructive,
+    },
+    /**
+     * For the deep navy band (splash, onboarding, login masthead). `primary`
+     * paints navy-on-navy there, which leaves the button all but invisible —
+     * the colours have to swap.
+     */
+    inverse: {
+      bg: colors.deepForeground,
+      fg: colors.deep,
+      border: colors.deepForeground,
     },
   };
   const tone = palette[variant];

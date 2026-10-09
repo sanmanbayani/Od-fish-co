@@ -2,8 +2,8 @@
 // token getter. Must run before any screen fires a request.
 import '@/lib/api';
 
-import React, { useEffect } from 'react';
-import { AppState, type AppStateStatus, Platform } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { AppState, type AppStateStatus, Platform, StyleSheet, View } from 'react-native';
 import {
   focusManager,
   QueryClient,
@@ -37,6 +37,8 @@ import colors from '@/constants/colors';
 import { fonts } from '@/constants/typography';
 import { AuthProvider } from '@/lib/auth';
 import { orderIdFrom } from '@/lib/notifications';
+import { hasSeenOnboarding } from '@/lib/onboarding';
+import { BrandSplash } from '@/components/BrandSplash';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -110,6 +112,14 @@ function RootLayoutNav() {
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      {/*
+        The carousel is the first thing a new customer sees, so it draws without
+        a header and without the modal slide — it is the app, not a sheet.
+      */}
+      <Stack.Screen
+        name="onboarding"
+        options={{ headerShown: false, animation: 'fade' }}
+      />
       <Stack.Screen
         name="login"
         options={{ presentation: 'modal', title: 'Sign in', headerShown: false }}
@@ -150,18 +160,36 @@ export default function RootLayout() {
     Inter_700Bold,
   });
 
+  // The boot decision and the splash are independent: the first-launch read
+  // resolves in milliseconds while the splash runs for seconds, so the target
+  // screen is already painted beneath the overlay by the time it fades. That is
+  // what makes the hand-off seamless rather than a second flash.
+  const [splashDone, setSplashDone] = useState(false);
+  const routed = useRef(false);
+
+  const ready = fontsLoaded || Boolean(fontError);
+
   useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError]);
+    if (ready) SplashScreen.hideAsync();
+  }, [ready]);
+
+  useEffect(() => {
+    if (!ready || routed.current) return;
+    routed.current = true;
+
+    // Route underneath the splash. `replace` so the carousel is not left in the
+    // back stack — backing out of the shop should never land on a tour.
+    hasSeenOnboarding().then((seen) => {
+      if (!seen) router.replace('/onboarding');
+    });
+  }, [ready]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', onAppStateChange);
     return () => subscription.remove();
   }, []);
 
-  if (!fontsLoaded && !fontError) return null;
+  if (!ready) return null;
 
   return (
     <SafeAreaProvider>
@@ -171,7 +199,17 @@ export default function RootLayout() {
             <GestureHandlerRootView>
               <KeyboardProvider>
                 <StatusBar style="dark" />
-                <RootLayoutNav />
+                <View style={styles.root}>
+                  <RootLayoutNav />
+                  {/*
+                    Held above the navigator so it can fade out over whichever
+                    screen the boot decision selected. Unmounted once it has
+                    finished, so it costs nothing at runtime.
+                  */}
+                  {!splashDone ? (
+                    <BrandSplash onDone={() => setSplashDone(true)} />
+                  ) : null}
+                </View>
               </KeyboardProvider>
             </GestureHandlerRootView>
           </AuthProvider>
@@ -180,3 +218,7 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+});

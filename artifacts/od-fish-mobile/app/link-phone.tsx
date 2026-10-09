@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { overlay, radii, spacing } from '@/constants/colors';
-import { fonts } from '@/constants/typography';
 import { useAuth } from '@/lib/auth';
 import { API_BASE_URL, setCurrentToken } from '@/lib/api';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
@@ -13,6 +12,7 @@ import { BrandMark } from '@/components/BrandMark';
 import { Text } from '@/components/ui/Text';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
+import { OtpInput } from '@/components/ui/OtpInput';
 import { Screen } from '@/components/ui/Screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -150,7 +150,9 @@ export default function LinkPhoneScreen() {
         bottomOffset={72}
       >
         <View style={styles.topRow}>
-          <BrandMark size={38} showWordmark={false} />
+          {/* `inverse`: this screen uses the deep navy band, and the default
+              tone paints the glyph navy — invisible against it. */}
+          <BrandMark size={38} showWordmark={false} tone="inverse" />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Skip"
@@ -205,24 +207,18 @@ export default function LinkPhoneScreen() {
             </>
           ) : (
             <>
-              <TextField
-                label="6-digit OTP"
-                placeholder="······"
-                keyboardType="number-pad"
-                textContentType="oneTimeCode"
-                autoComplete="one-time-code"
-                returnKeyType="done"
-                onSubmitEditing={() => onVerify()}
-                maxLength={6}
+              <Text variant="label" tone="muted" uppercase style={styles.otpLabel}>
+                6-digit OTP
+              </Text>
+              <OtpInput
                 value={otp}
-                onChangeText={(t) => {
-                  const digits = t.replace(/\D/g, '');
-                  setOtp(digits);
-                  if (digits.length === 6) onVerify(digits);
+                onChange={(next) => {
+                  setOtp(next);
+                  if (error) setError(null);
                 }}
+                onComplete={onVerify}
                 error={error}
                 autoFocus
-                style={styles.otpInput}
               />
               {devOtp ? (
                 <View
@@ -312,11 +308,7 @@ const styles = StyleSheet.create({
   sub: { marginTop: spacing.sm, maxWidth: 320 },
   sheet: { marginTop: spacing.xl, padding: spacing.lg },
   action: { marginTop: spacing.lg },
-  otpInput: {
-    fontFamily: fonts.monoBold,
-    fontSize: 22,
-    letterSpacing: Platform.OS === 'web' ? 8 : 10,
-  },
+  otpLabel: { marginBottom: 10 },
   devHint: {
     flexDirection: 'row',
     alignItems: 'center',
