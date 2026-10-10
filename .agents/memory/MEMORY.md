@@ -15,3 +15,4 @@
 - [Onboarding & splash decisions](onboarding-splash-decisions.md) — the restraint the user asked for, native/in-app splash coupling, and why photos are square-sourced.
 - [Native release bundling](native-release-bundling.md) — two independent reasons `expo export:embed` fails here, and why the obvious Gradle-side fix makes it worse.
 - [Windows Android path budget](windows-native-build-path-budget.md) — the monorepo spends ~85 of ninja's 260 chars before any library does; measure before moving folders.
+- [Expo Go needs offline mode](expo-go-offline-mode.md) — EAS-linked app.json makes the CLI prompt for login and Expo Go fails; the dev script keeps EXPO_OFFLINE=1.
