@@ -109,15 +109,6 @@ export default function HomeScreen() {
       opacity: interpolate(y, [0, ADDRESS_COLLAPSE * 0.66], [1, 0], Extrapolation.CLAMP),
     };
   });
-  // The shadow belongs to whichever layer is the bottom edge: the header
-  // until the bar pins, then the bar.
-  const headerShadeStyle = useAnimatedStyle(() => {
-    const y = scrollY.get();
-    const s = stickAt.get();
-    const filled = interpolate(y, [0, HEADER_FILL], [0, 1], Extrapolation.CLAMP);
-    const docked = interpolate(y, [s - DOCK_FADE, s], [0, 1], Extrapolation.CLAMP);
-    return { opacity: filled * (1 - docked) };
-  });
   const categoryDockedStyle = useAnimatedStyle(() => {
     const s = stickAt.get();
     return {
@@ -243,9 +234,6 @@ export default function HomeScreen() {
       {/* ---- Sticky header: address bar + search bar + categories stacked on scroll ---- */}
       <View style={[styles.stickySearchWrap, { paddingTop: insets.top + spacing.sm }]}>
         <Animated.View style={[styles.whiteFill, headerFillStyle]} />
-        <Animated.View style={[styles.shade, headerShadeStyle]}>
-          <LinearGradient colors={SHADE_COLORS} style={StyleSheet.absoluteFill} />
-        </Animated.View>
         <View style={styles.stickyTopContent}>
           {/* Address bar — collapses on scroll */}
           <Animated.View style={[styles.heroTopBar, styles.addressClip, addressBarStyle]}>
