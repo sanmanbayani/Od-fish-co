@@ -28,3 +28,6 @@ packages = ["potrace", "librsvg"]
 [userenv.shared]
 SUPABASE_DB_HOST = "aws-0-ap-northeast-2.pooler.supabase.com"
 SUPABASE_DB_USER = "postgres.myvzslskdpzftvescrmw"
+
+[userenv.development]
+AUTH_MOCK_OTP = "123456"
