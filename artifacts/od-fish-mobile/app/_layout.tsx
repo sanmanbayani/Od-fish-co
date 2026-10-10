@@ -181,7 +181,7 @@ export default function RootLayout() {
   const ready = fontsLoaded || Boolean(fontError);
 
   useEffect(() => {
-    if (ready) SplashScreen.hideAsync();
+    if (ready) SplashScreen.hideAsync().catch(() => {});
   }, [ready]);
 
   useEffect(() => {

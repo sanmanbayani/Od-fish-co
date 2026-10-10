@@ -19,37 +19,47 @@ export function ProductCard({ product, width = 168 }: { product: Product; width?
     .filter((v) => v.isActive)
     .sort((a, b) => a.pricePaise - b.pricePaise)[0];
 
+  const goToProduct = () => {
+    router.push(`/product/${product.slug}`);
+  };
+
   return (
-    <Pressable
-      onPress={() => router.push(`/product/${product.slug}`)}
-      style={({ pressed }) => [
+    <View
+      style={[
         styles.card,
         {
           width,
           backgroundColor: colors.card,
           borderColor: colors.border,
           borderRadius: radii.xl,
-          opacity: pressed ? 0.9 : 1,
         },
       ]}
     >
       <View style={[styles.imageWrap, { backgroundColor: colors.accent }]}>
-        <Image
-          source={STUDIO_PREVIEWS[product.slug] ?? mediaUrl(product.imageUrls?.[0])}
-          style={styles.image}
-          contentFit="cover"
-          transition={180}
-        />
-        {!product.inStock ? (
-          <View style={styles.soldOutVeil}>
-            <Badge label="Sold out" tone="navy" />
-          </View>
-        ) : null}
+        <Pressable
+          onPress={goToProduct}
+          style={({ pressed }) => [StyleSheet.absoluteFillObject, { opacity: pressed ? 0.9 : 1 }]}
+        >
+          <Image
+            source={STUDIO_PREVIEWS[product.slug] ?? mediaUrl(product.imageUrls?.[0])}
+            style={styles.image}
+            contentFit="cover"
+            transition={180}
+          />
+          {!product.inStock ? (
+            <View style={styles.soldOutVeil}>
+              <Badge label="Sold out" tone="navy" />
+            </View>
+          ) : null}
+        </Pressable>
         <View style={styles.quickAdd}>
           <QuickAddButton product={product} />
         </View>
       </View>
-      <View style={styles.body}>
+      <Pressable
+        onPress={goToProduct}
+        style={({ pressed }) => [styles.body, { opacity: pressed ? 0.9 : 1 }]}
+      >
         <Text variant="cardTitle" numberOfLines={1}>
           {product.name}
         </Text>
@@ -66,8 +76,8 @@ export function ProductCard({ product, width = 168 }: { product: Product; width?
             {cheapest.packLabel}
           </Text>
         ) : null}
-      </View>
-    </Pressable>
+      </Pressable>
+    </View>
   );
 }
 

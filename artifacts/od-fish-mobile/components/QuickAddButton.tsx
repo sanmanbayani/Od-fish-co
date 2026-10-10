@@ -35,7 +35,7 @@ export function QuickAddButton({ product }: { product: Product }) {
         accessibilityRole="button"
         accessibilityLabel={`Add ${product.name} to basket`}
         onPress={tap(increment)}
-        hitSlop={8}
+        hitSlop={12}
         style={({ pressed }) => [
           styles.add,
           {

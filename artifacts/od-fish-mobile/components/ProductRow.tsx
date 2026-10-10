@@ -20,44 +20,43 @@ export function ProductRow({ product }: { product: Product }) {
   const multiPack = active.length > 1;
 
   return (
-    <Pressable
-      onPress={() => router.push(`/product/${product.slug}`)}
-      style={({ pressed }) => [
+    <View
+      style={[
         styles.row,
         {
           backgroundColor: colors.card,
           borderColor: colors.border,
           borderRadius: radii.xl,
-          opacity: pressed ? 0.9 : 1,
         },
       ]}
     >
-      <View style={[styles.thumbWrap, { backgroundColor: colors.accent }]}>
-        <Image
-          source={STUDIO_PREVIEWS[product.slug] ?? mediaUrl(product.imageUrls?.[0])}
-          style={styles.thumb}
-          contentFit="cover"
-          transition={180}
-        />
-        {!product.inStock ? <View style={styles.veil} /> : null}
-      </View>
-
-      <View style={styles.body}>
-        <View style={styles.titleRow}>
-          <Text variant="cardTitle" numberOfLines={1} style={styles.flex}>
-            {product.name}
-          </Text>
+      <Pressable
+        onPress={() => router.push(`/product/${product.slug}`)}
+        style={({ pressed }) => [styles.mainArea, { opacity: pressed ? 0.9 : 1 }]}
+      >
+        <View style={[styles.thumbWrap, { backgroundColor: colors.accent }]}>
+          <Image
+            source={STUDIO_PREVIEWS[product.slug] ?? mediaUrl(product.imageUrls?.[0])}
+            style={styles.thumb}
+            contentFit="cover"
+            transition={180}
+          />
+          {!product.inStock ? <View style={styles.veil} /> : null}
         </View>
-        {cheapest ? (
-          <Text variant="tiny" tone="muted" numberOfLines={1} style={styles.meta}>
-            {/* With several sizes on offer, naming just one pack is misleading
-                and overflows the row — say how many sizes there are instead. */}
-            {multiPack
-              ? `${cutLabel(cheapest.cutType)} · ${active.length} pack sizes`
-              : `${cutLabel(cheapest.cutType)} · ${cheapest.packLabel}`}
-          </Text>
-        ) : null}
-        <View style={styles.footer}>
+
+        <View style={styles.body}>
+          <View style={styles.titleRow}>
+            <Text variant="cardTitle" numberOfLines={1} style={styles.flex}>
+              {product.name}
+            </Text>
+          </View>
+          {cheapest ? (
+            <Text variant="tiny" tone="muted" numberOfLines={1} style={styles.meta}>
+              {multiPack
+                ? `${cutLabel(cheapest.cutType)} · ${active.length} pack sizes`
+                : `${cutLabel(cheapest.cutType)} · ${cheapest.packLabel}`}
+            </Text>
+          ) : null}
           <View style={styles.priceRow}>
             {multiPack ? (
               <Text variant="tiny" tone="muted">
@@ -71,22 +70,36 @@ export function ProductRow({ product }: { product: Product }) {
               </Text>
             ) : null}
           </View>
-          {product.inStock ? (
-            <QuickAddButton product={product} />
-          ) : (
-            <Badge label="Sold out" tone="neutral" />
-          )}
         </View>
+      </Pressable>
+
+      <View style={styles.actionWrap}>
+        {product.inStock ? (
+          <QuickAddButton product={product} />
+        ) : (
+          <Badge label="Sold out" tone="neutral" />
+        )}
       </View>
-    </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
+  },
+  mainArea: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionWrap: {
+    paddingRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   thumbWrap: { width: 104, aspectRatio: 0.92 },
   thumb: { width: '100%', height: '100%' },
@@ -98,12 +111,6 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   flex: { flex: 1 },
   meta: { marginTop: 3 },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   strike: { textDecorationLine: 'line-through' },
 });
