@@ -68,9 +68,9 @@ service answers `DeviceNotRegistered` and the row is deleted. That exercises
 copy, batching, transport and dead-token cleanup — everything except the last
 hop. Real end-to-end verification waits for a real build.
 
-## Sticky elements: one instance, translated in place
+## Sticky elements: one instance, pinned by the ScrollView itself
 
-On the home screen the category bar is a single element inside the scroll content. Once it reaches the bottom of the folded header, it gets translated down by the scroll overshoot. It is never a second copy shown in the header.
+The home category bar is a single element. On native it is pinned with `stickyHeaderIndices`. The sticky child has a negative top margin and an equal top padding, both the header height, and `pointerEvents: 'box-none'`, so it pins under the header instead of at the top of the screen. On web it uses CSS `position: sticky; top: <header height>`, because react-native-web wraps sticky children in its own box and ignores that trick.
 
-**Why:** the earlier two-copy crossfade showed both bars on top of each other during a slow scroll, and the user called it out. A single instance also keeps the selected state and horizontal scroll position consistent.
-**How to apply:** do scroll-linked header work with Reanimated on the UI thread. The pin point is measured (search bar height and the bar's layout y), not hard-coded. Shadows are gradient strips with animated opacity, not `elevation`/`shadowOpacity`, so both platforms match.
+**Why:** a two-copy crossfade showed both bars during a slow scroll. Translating one bar from a Reanimated scroll handler shook while pinned, because the handler lands a frame after the native scroll. The native sticky header moves in the same frame.
+**How to apply:** never position anything scroll-pinned from a JS or worklet scroll handler. Use handlers only for opacity and fold effects, where a frame of lag is invisible. Remember that RN's sticky header swallows the child's own `onLayout`, so measure the block above the bar instead.
