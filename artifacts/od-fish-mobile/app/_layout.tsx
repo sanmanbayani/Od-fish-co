@@ -135,6 +135,7 @@ function RootLayoutNav() {
       <Stack.Screen name="checkout" options={{ title: 'Checkout' }} />
       <Stack.Screen name="order/[id]" options={{ title: 'Order' }} />
       <Stack.Screen name="addresses" options={{ title: 'Delivery addresses' }} />
+      <Stack.Screen name="delivery-slots" options={{ title: 'Delivery slots' }} />
       <Stack.Screen
         name="address-form"
         options={{ presentation: 'modal', title: 'Address' }}

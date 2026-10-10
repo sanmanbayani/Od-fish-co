@@ -10,8 +10,9 @@ import {
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { radii, spacing } from '@/constants/colors';
-import { apiErrorMessage } from '@/lib/format';
+import { apiErrorMessage, deliveryDate } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
+import { usePreferredSlot } from '@/lib/preferredSlot';
 import { BrandMark } from '@/components/BrandMark';
 import { Text } from '@/components/ui/Text';
 import { Button } from '@/components/ui/Button';
@@ -25,6 +26,7 @@ export default function AccountScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { isReady, isSignedIn, customer, signOut, setCustomer } = useAuth();
+  const preferredSlot = usePreferredSlot();
 
   const profile = useGetCurrentCustomer({
     query: { queryKey: ['me'], enabled: isSignedIn },
@@ -217,8 +219,12 @@ export default function AccountScreen() {
           <Row
             icon="clock"
             label="Delivery slots"
-            caption="Morning and evening runs across Mumbai"
-            onPress={() => router.push('/(tabs)/shop')}
+            caption={
+              preferredSlot
+                ? `${deliveryDate(preferredSlot.deliveryDate)} · ${preferredSlot.label}`
+                : 'Morning and evening runs across Mumbai'
+            }
+            onPress={() => router.push('/delivery-slots')}
           />
         </Card>
 
