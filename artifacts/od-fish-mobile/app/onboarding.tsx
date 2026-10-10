@@ -1,24 +1,22 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Animated,
-  Easing,
-  Image,
-  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
+  type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { deepInk, mint, overlay, radii, spacing } from '@/constants/colors';
+import { deepInk, spacing } from '@/constants/colors';
 import { fonts } from '@/constants/typography';
 import { markOnboardingSeen } from '@/lib/onboarding';
-import { LogoGlyph } from '@/components/BrandMark';
 import { Text } from '@/components/ui/Text';
 import { Button } from '@/components/ui/Button';
 
@@ -26,62 +24,42 @@ import { Button } from '@/components/ui/Button';
 
 type Slide = {
   key: string;
-  /** Art. `aspect` drives the illustration box so text never gets pushed off. */
   image: number;
-  aspect: number;
-  /** Framing hints for the illustration container. */
-  kicker: string;
   title: string;
+  /** One line of support. If it needs a second sentence, the headline is wrong. */
   body: string;
-  /** Short proof-points shown under the copy. */
-  points?: string[];
 };
 
 /**
- * Four beats, in the order a new customer needs them: what this is, why it is
- * fresher, what they will actually receive, and how the delivery works. The
- * weight slide exists because gross-vs-net is the single most common source of
- * complaint in this category — better to explain it before the first order than
- * to defend it after.
+ * Three beats: what it is, why it is better, how it reaches you. The net-weight
+ * promise lives on the middle slide on purpose — gross vs net is the top
+ * complaint in this category, so it is said before the first order, not after.
  */
 const SLIDES: Slide[] = [
   {
-    key: 'boat',
-    image: require('@/assets/images/boat-scene.png'),
-    aspect: 1200 / 656,
-    kicker: 'FRESH FROM THE BOAT',
-    title: 'Off the boat,\non your plate',
-    body: 'Fish that came in at Sassoon Dock this morning, cleaned and cut to order, at your door by the window you picked.',
-    points: ['Same-day catch', 'Cut to order', '0–4 °C to your door'],
-  },
-  {
     key: 'catch',
-    image: require('@/assets/images/fish-catch.png'),
-    aspect: 1,
-    kicker: 'LANDED THIS MORNING',
-    title: 'Know today’s\ncatch before you buy',
-    body: 'Surmai, bangda, pomfret — what landed overnight and how much of it is left. No guessing what turns up in the box.',
-    points: ['Live stock counts', 'Straight from the dock'],
+    image: require('@/assets/images/onboarding-dock-catch.jpg'),
+    title: 'Today’s catch,\ndelivered',
+    body: 'Landed at Sassoon Dock this morning. At your door the same day.',
   },
   {
-    key: 'weight',
-    image: require('@/assets/images/fish-catch.png'),
-    aspect: 1,
-    kicker: 'NO SURPRISES',
-    title: 'You see the net\nweight up front',
-    body: 'Sea fish never weighs the same twice, so we price the pack and never the gram. Every option shows its gross weight and its net edible weight before you pay.',
-    points: ['Gross and net disclosed', 'Priced per pack, not per gram'],
+    key: 'cut',
+    image: require('@/assets/images/onboarding-cut-to-order.jpg'),
+    title: 'Cut fresh,\nto order',
+    body: 'Cleaned only after you order. Net weight shown before you pay.',
   },
   {
-    key: 'delivery',
-    image: require('@/assets/images/boat-scene.png'),
-    aspect: 1200 / 656,
-    kicker: 'ON YOUR SCHEDULE',
-    title: 'Choose the window.\nWe do the rest',
-    body: 'Morning, afternoon or evening slots across Mumbai. Track your order, and hand it over with a code so only your household takes delivery.',
-    points: ['Slots across the day', 'Tracking and a handover code'],
+    key: 'door',
+    image: require('@/assets/images/onboarding-doorstep.jpg'),
+    title: 'Delivered in\nyour slot',
+    body: 'Pick a morning, afternoon or evening window anywhere in Mumbai.',
   },
 ];
+
+const LAST = SLIDES.length - 1;
+
+/** Photo overscan, so the parallax drift never reveals an edge. */
+const PHOTO_SCALE = 1.12;
 
 /* ----------------------------------------------------------------- screen */
 
@@ -89,316 +67,378 @@ export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
 
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewHandle>(null);
   const [index, setIndex] = useState(0);
+  const indexRef = useRef(0);
+  const leaving = useRef(false);
 
-  // One shared value drives every transition, so the dots, the illustration
-  // cross-fade and the copy all stay in step with the finger.
+  // The footer is fixed; the copy on each page sits just above it. Measured,
+  // not guessed, because the bottom inset varies a lot between phones.
+  const [footerHeight, setFooterHeight] = useState(180);
+
+  // One value drives every transition, so photo, copy and indicator move with
+  // the finger rather than snapping page to page.
   const offset = useRef(new Animated.Value(0)).current;
 
-  const isLast = index === SLIDES.length - 1;
+  const isLast = index === LAST;
 
-  const finish = useCallback(async () => {
+  // Photo fills the top of the screen edge to edge and runs down behind the
+  // copy, fading into ink, so a tall phone shows more photo rather than a band
+  // of empty navy. Capped by width so the square sources are not over-cropped.
+  const photoHeight = Math.round(Math.min(height - footerHeight - 40, width * 1.6));
+  const compact = width < 370 || height < 700;
+
+  const leave = useCallback(async (then?: () => void) => {
+    if (leaving.current) return;
+    leaving.current = true;
     await markOnboardingSeen();
     // `replace`, not `push` — the carousel must not sit in the back stack.
     router.replace('/(tabs)');
+    then?.();
   }, []);
 
+  const finish = useCallback(() => void leave(), [leave]);
+
+  // Login is a modal over the shop, so closing it (or finishing sign-in) lands
+  // the customer in the storefront, never back on the tour.
+  const openLogin = useCallback(
+    () => void leave(() => router.push('/login')),
+    [leave],
+  );
+
+  const goTo = useCallback(
+    (next: number) => {
+      scrollRef.current?.scrollTo({ x: next * width, animated: true });
+      indexRef.current = next;
+      setIndex(next);
+    },
+    [width],
+  );
+
   const advance = useCallback(() => {
-    if (isLast) {
-      void finish();
-      return;
-    }
-    const next = index + 1;
-    scrollRef.current?.scrollTo({ x: next * width, animated: true });
-    setIndex(next);
-  }, [index, isLast, finish, width]);
+    if (indexRef.current >= LAST) finish();
+    else goTo(indexRef.current + 1);
+  }, [finish, goTo]);
 
   const onScroll = useMemo(
     () =>
-      Animated.event(
-        [{ nativeEvent: { contentOffset: { x: offset } } }],
-        { useNativeDriver: false },
-      ),
-    [offset],
+      Animated.event([{ nativeEvent: { contentOffset: { x: offset } } }], {
+        useNativeDriver: true,
+        // Track the page from the live offset as well as momentum end: web
+        // does not reliably fire momentum events.
+        listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+          const next = Math.round(e.nativeEvent.contentOffset.x / width);
+          if (next !== indexRef.current && next >= 0 && next <= LAST) {
+            indexRef.current = next;
+            setIndex(next);
+          }
+        },
+      }),
+    [offset, width],
   );
 
-  const onMomentumEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const next = Math.round(e.nativeEvent.contentOffset.x / width);
-    if (next !== index) setIndex(next);
+  const onFooterLayout = (e: LayoutChangeEvent) => {
+    const h = Math.round(e.nativeEvent.layout.height);
+    if (Math.abs(h - footerHeight) > 1) setFooterHeight(h);
   };
 
-  // Illustration height, clamped so it never crowds out the copy on a short
-  // screen. The art is the hero, but the words are the point.
-  const artHeight = Math.min(height * 0.36, 320);
+  const loginOpacity = offset.interpolate({
+    inputRange: [(LAST - 1) * width, LAST * width],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
 
   return (
     <View style={styles.root}>
-      {/* ------------------------------- skip ------------------------------ */}
-      <View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]}>
-        <LogoGlyph width={34} color={overlay.mutedForeground} />
-        <Pressable
-          onPress={finish}
-          hitSlop={14}
-          accessibilityRole="button"
-          accessibilityLabel="Skip the introduction"
-          style={[styles.skip, { borderColor: overlay.hairline }]}
-        >
-          <Text variant="smallMedium" style={styles.skipLabel}>
-            Skip
-          </Text>
-        </Pressable>
+      <StatusBar style="light" />
+
+      {/* ------------------------------ photos ---------------------------- */}
+      <View style={[styles.photoFrame, { height: photoHeight }]}>
+        {SLIDES.map((slide, i) => {
+          const range = [(i - 1) * width, i * width, (i + 1) * width];
+          return (
+            <Animated.View
+              key={slide.key}
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  opacity: offset.interpolate({
+                    inputRange: range,
+                    outputRange: [0, 1, 0],
+                    extrapolate: 'clamp',
+                  }),
+                  transform: [
+                    {
+                      translateX: offset.interpolate({
+                        inputRange: range,
+                        outputRange: [width * 0.05, 0, -width * 0.05],
+                        extrapolate: 'clamp',
+                      }),
+                    },
+                    { scale: PHOTO_SCALE },
+                  ],
+                },
+              ]}
+            >
+              <Image
+                source={slide.image}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                transition={0}
+                accessible={false}
+              />
+            </Animated.View>
+          );
+        })}
+
+        {/* Keeps the status bar and Skip legible over a bright sky. */}
+        <LinearGradient
+          colors={['rgba(4,10,24,0.55)', 'rgba(4,10,24,0)']}
+          style={[styles.topShade, { height: insets.top + 72 }]}
+        />
+        {/* Hands the photo over to the ink panel without a visible seam. */}
+        <LinearGradient
+          colors={[
+            'rgba(8,20,46,0)',
+            'rgba(8,20,46,0.45)',
+            'rgba(8,20,46,0.9)',
+            deepInk,
+          ]}
+          locations={[0, 0.4, 0.78, 1]}
+          style={[styles.bottomShade, { height: photoHeight * 0.58 }]}
+        />
       </View>
 
-      {/* ---------------------------- carousel ---------------------------- */}
-      <ScrollView
-        ref={scrollRef}
+      {/* ------------------------------ pages ----------------------------- */}
+      <Animated.ScrollView
+        ref={scrollRef as never}
         horizontal
         pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        onMomentumScrollEnd={onMomentumEnd}
-        // Paging is the interaction; let it own the horizontal axis.
-        directionalLockEnabled
         bounces={false}
-        style={styles.scroller}
+        overScrollMode="never"
+        directionalLockEnabled
+        showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={onScroll}
+        style={StyleSheet.absoluteFill}
       >
         {SLIDES.map((slide, i) => {
-          // Each slide fades and drifts as it hands over to the next.
-          const inputRange = [(i - 1) * width, i * width, (i + 1) * width];
-          const artOpacity = offset.interpolate({
-            inputRange,
-            outputRange: [0, 1, 0],
-            extrapolate: 'clamp',
-          });
-          const artShift = offset.interpolate({
-            inputRange,
-            outputRange: [width * 0.18, 0, -width * 0.18],
-            extrapolate: 'clamp',
-          });
-          const copyOpacity = offset.interpolate({
-            inputRange,
-            outputRange: [0, 1, 0],
-            extrapolate: 'clamp',
-          });
-          const copyShift = offset.interpolate({
-            inputRange,
-            outputRange: [width * 0.12, 0, -width * 0.12],
-            extrapolate: 'clamp',
-          });
-
+          const range = [(i - 1) * width, i * width, (i + 1) * width];
           return (
-            <View key={slide.key} style={[styles.slide, { width }]}>
+            <View
+              key={slide.key}
+              style={[
+                styles.page,
+                { width, paddingBottom: footerHeight + spacing.xl },
+              ]}
+            >
               <Animated.View
-                style={[
-                  styles.artBox,
-                  {
-                    height: artHeight,
-                    opacity: artOpacity,
-                    transform: [{ translateX: artShift }],
-                  },
-                ]}
+                style={{
+                  opacity: offset.interpolate({
+                    inputRange: range,
+                    outputRange: [0, 1, 0],
+                    extrapolate: 'clamp',
+                  }),
+                }}
               >
-                {/* Halo behind the art, tinted per slide's own framing. */}
-                <View style={styles.halo} />
-                <Image
-                  source={slide.image}
-                  style={{ width: '100%', height: '100%' }}
-                  resizeMode="contain"
-                />
-              </Animated.View>
-
-              <Animated.View
-                style={[
-                  styles.copy,
-                  { opacity: copyOpacity, transform: [{ translateX: copyShift }] },
-                ]}
-              >
-                <Text style={styles.kicker}>{slide.kicker}</Text>
-                <Text style={styles.title}>{slide.title}</Text>
-                <Text style={styles.body}>{slide.body}</Text>
-
-                {slide.points ? (
-                  <View style={styles.points}>
-                    {slide.points.map((point) => (
-                      <View key={point} style={styles.point}>
-                        <View style={styles.pointDot}>
-                          <Feather name="check" size={10} color={deepInk} />
-                        </View>
-                        <Text variant="small" style={styles.pointLabel}>
-                          {point}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
+                <Text
+                  accessibilityRole="header"
+                  style={[styles.title, compact && styles.titleCompact]}
+                >
+                  {slide.title}
+                </Text>
+                <Text style={[styles.body, compact && styles.bodyCompact]}>
+                  {slide.body}
+                </Text>
               </Animated.View>
             </View>
           );
         })}
-      </ScrollView>
+      </Animated.ScrollView>
+
+      {/* ------------------------------- skip ----------------------------- */}
+      <View style={[styles.topBar, { top: insets.top + spacing.sm }]}>
+        <Pressable
+          onPress={finish}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Skip introduction"
+          testID="onboarding-skip"
+          style={({ pressed }) => [styles.skip, pressed && styles.pressed]}
+        >
+          <Text style={styles.skipLabel}>Skip</Text>
+        </Pressable>
+      </View>
 
       {/* ------------------------------ footer ---------------------------- */}
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
-        <View style={styles.dots}>
-          {SLIDES.map((slide, i) => {
-            // Dots track the finger continuously, not just page-to-page.
-            const inputRange = [(i - 1) * width, i * width, (i + 1) * width];
-            const dotWidth = offset.interpolate({
-              inputRange,
-              outputRange: [7, 22, 7],
-              extrapolate: 'clamp',
-            });
-            const dotOpacity = offset.interpolate({
-              inputRange,
-              outputRange: [0.32, 1, 0.32],
-              extrapolate: 'clamp',
-            });
-            return (
+      <View
+        onLayout={onFooterLayout}
+        style={[
+          styles.footer,
+          { paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.sm },
+        ]}
+      >
+        <View
+          style={styles.indicator}
+          accessibilityRole="progressbar"
+          accessibilityLabel={`Step ${index + 1} of ${SLIDES.length}`}
+        >
+          {SLIDES.map((slide, i) => (
+            <View key={slide.key} style={styles.segment}>
               <Animated.View
-                key={slide.key}
                 style={[
-                  styles.dot,
-                  { width: dotWidth, opacity: dotOpacity },
+                  styles.segmentFill,
+                  {
+                    opacity: offset.interpolate({
+                      inputRange: [(i - 1) * width, i * width, (i + 1) * width],
+                      outputRange: [0, 1, 0],
+                      extrapolate: 'clamp',
+                    }),
+                  },
                 ]}
               />
-            );
-          })}
+            </View>
+          ))}
         </View>
 
         <Button
           label={isLast ? 'Start shopping' : 'Next'}
           size="lg"
           fullWidth
-          // `inverse`, not `primary`: this CTA sits on the deep navy band, where
-          // the navy primary button is invisible against its own background.
+          // `inverse`: a light button on the ink panel. `primary` is navy and
+          // would disappear into the background.
           variant="inverse"
           onPress={advance}
-          trailing={
-            <Feather
-              name={isLast ? 'arrow-right' : 'chevron-right'}
-              size={16}
-              color={deepInk}
-            />
-          }
+          testID="onboarding-next"
           style={styles.cta}
         />
 
-        {isLast ? (
-          <Text variant="small" style={styles.footNote}>
-            You can change your address and slot at checkout.
-          </Text>
-        ) : (
-          <Pressable onPress={finish} hitSlop={10}>
-            <Text variant="small" style={styles.footNote}>
-              I have ordered before
+        {/* Space is held on every page so the button never jumps. */}
+        <Animated.View
+          style={[
+            styles.loginRow,
+            { opacity: loginOpacity, pointerEvents: isLast ? 'auto' : 'none' },
+          ]}
+        >
+          <Pressable
+            onPress={openLogin}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Already a customer? Log in"
+            accessibilityElementsHidden={!isLast}
+            importantForAccessibility={isLast ? 'auto' : 'no-hide-descendants'}
+            testID="onboarding-login"
+            style={({ pressed }) => [styles.loginHit, pressed && styles.pressed]}
+          >
+            <Text style={styles.loginLead}>
+              Already a customer? <Text style={styles.loginLink}>Log in</Text>
             </Text>
           </Pressable>
-        )}
+        </Animated.View>
       </View>
     </View>
   );
 }
 
+/** The bits of ScrollView this screen calls; Animated.ScrollView's ref type is loose. */
+type ScrollViewHandle = { scrollTo: (o: { x: number; animated: boolean }) => void };
+
 /* ---------------------------------------------------------------- styles */
+
+const WHITE = '#FFFFFF';
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: deepInk },
 
+  photoFrame: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    overflow: 'hidden',
+    pointerEvents: 'none',
+  },
+  topShade: { position: 'absolute', top: 0, left: 0, right: 0 },
+  bottomShade: { position: 'absolute', bottom: 0, left: 0, right: 0 },
+
+  page: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    paddingHorizontal: spacing.xl,
+  },
+  title: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 34,
+    lineHeight: 40,
+    letterSpacing: -0.9,
+    color: WHITE,
+  },
+  titleCompact: { fontSize: 30, lineHeight: 35, letterSpacing: -0.7 },
+  body: {
+    fontFamily: fonts.body,
+    fontSize: 16,
+    lineHeight: 23,
+    color: 'rgba(255,255,255,0.74)',
+    marginTop: spacing.md,
+    maxWidth: 330,
+  },
+  bodyCompact: { fontSize: 15, lineHeight: 21 },
+
   topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
+    position: 'absolute',
+    right: spacing.lg,
     zIndex: 2,
   },
   skip: {
-    paddingHorizontal: 13,
-    paddingVertical: 6,
-    borderRadius: radii.pill,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  skipLabel: { color: '#F8F6F1' },
-
-  scroller: { flex: 1 },
-  slide: {
-    flex: 1,
-    paddingHorizontal: spacing.xl,
-    justifyContent: 'center',
-  },
-
-  artBox: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xl,
-  },
-  halo: {
-    position: 'absolute',
-    width: '104%',
-    aspectRatio: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: 999,
-    backgroundColor: mint,
-    opacity: 0.07,
+    backgroundColor: 'rgba(4,10,24,0.38)',
   },
-
-  copy: {},
-  kicker: {
+  skipLabel: {
     fontFamily: fonts.bodySemi,
-    fontSize: 10.5,
-    lineHeight: 14,
-    letterSpacing: 2.2,
-    color: mint,
+    fontSize: 13,
+    lineHeight: 17,
+    color: WHITE,
   },
-  title: {
-    fontFamily: fonts.displayBold,
-    fontSize: 31,
-    lineHeight: 37,
-    letterSpacing: -0.4,
-    color: '#F8F6F1',
-    marginTop: 10,
-  },
-  body: {
-    fontFamily: fonts.body,
-    fontSize: 14.5,
-    lineHeight: 22,
-    color: overlay.mutedForeground,
-    marginTop: 12,
-  },
-
-  points: { marginTop: 18, gap: 9 },
-  point: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  pointDot: {
-    width: 17,
-    height: 17,
-    borderRadius: 9,
-    backgroundColor: mint,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pointLabel: { color: '#F8F6F1' },
+  pressed: { opacity: 0.6 },
 
   footer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-    gap: spacing.md,
   },
-  dots: {
+  indicator: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 6,
-    height: 8,
+    marginBottom: spacing.xl,
   },
-  dot: {
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: mint,
+  segment: {
+    width: 22,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.24)',
+    overflow: 'hidden',
   },
-  cta: { marginTop: 2 },
-  footNote: {
-    textAlign: 'center',
-    color: overlay.mutedForeground,
-    paddingVertical: Platform.OS === 'android' ? 2 : 0,
+  segmentFill: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: WHITE,
   },
+  cta: { borderRadius: 14 },
+  loginRow: {
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.xs,
+  },
+  loginHit: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+  loginLead: {
+    fontFamily: fonts.body,
+    fontSize: 14,
+    lineHeight: 20,
+    color: 'rgba(255,255,255,0.66)',
+  },
+  loginLink: { fontFamily: fonts.bodySemi, color: WHITE },
 });

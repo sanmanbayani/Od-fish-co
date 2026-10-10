@@ -1,15 +1,25 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Animated,
   Image,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
+  type ViewStyle,
 } from 'react-native';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,7 +37,8 @@ import { useAuth } from '@/lib/auth';
 import { setPreferredSlot, usePreferredSlot } from '@/lib/preferredSlot';
 import { useUserLocation } from '@/hooks/useUserLocation';
 import { CartBar } from '@/components/CartBar';
-import { CategoryNav } from '@/components/CategoryTile';
+import { CategoryNav, getCategoryNavItems } from '@/components/CategoryTile';
+import { RotatingSearchHint } from '@/components/RotatingSearchHint';
 import { ProductCard } from '@/components/ProductCard';
 import { SlotPicker, slotKey } from '@/components/SlotPicker';
 import { Text } from '@/components/ui/Text';
@@ -45,26 +56,65 @@ const HERO_BG = '#C8D7F7';
 const HERO_SEARCH_BG = '#FFFFFF';
 const HERO_SEARCH_BORDER = 'rgba(0,0,0,0.06)';
 
+/** Scroll distance over which the address row folds away. */
+const ADDRESS_COLLAPSE = 60;
+/** Scroll distance over which the header turns solid white. */
+const HEADER_FILL = 80;
+/** The category bar turns white over the last few px before it pins. */
+const DOCK_FADE = 16;
+
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const gridWidth = Math.min((width - spacing.lg * 2 - 12) / 2, 260);
   const { customer } = useAuth();
-  const scrollY = useRef(new Animated.Value(0)).current;
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [dockThreshold, setDockThreshold] = useState<number>(360);
-  const [isDocked, setIsDocked] = useState<boolean>(false);
 
+  /* ---- Scroll-driven header and sticky category bar ----
+   *
+   * There is exactly one category bar. It scrolls with the page and is pinned
+   * by the ScrollView's own native sticky-header support, which moves it in
+   * the same frame as the scroll. (Moving it ourselves from a scroll handler
+   * lands a frame late and makes it shake while pinned.) Scroll-linked styles
+   * below only change opacity and the header's fold, where a frame of lag is
+   * invisible.
+   */
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.set(e.contentOffset.y);
+  });
+
+  // Where the bar pins: the bottom edge of the header once the address row has
+  // folded away. Measured from the search bar rather than hard-coded.
+  const [searchBarHeight, setSearchBarHeight] = useState(46);
+  const dockTop = insets.top + spacing.sm + searchBarHeight + spacing.sm;
+  const [aboveBarHeight, setAboveBarHeight] = useState<number | null>(null);
+  // Scroll offset at which the bar pins. Huge until measured, so it never fades early.
+  const stickAt = useSharedValue(Number.MAX_SAFE_INTEGER);
   useEffect(() => {
-    const id = scrollY.addListener(({ value }) => {
-      const docked = value >= dockThreshold;
-      setIsDocked((prev) => (prev !== docked ? docked : prev));
-    });
-    return () => {
-      scrollY.removeListener(id);
+    if (aboveBarHeight !== null) {
+      stickAt.set(Math.max(0, aboveBarHeight + spacing.md - dockTop));
+    }
+  }, [aboveBarHeight, dockTop, stickAt]);
+
+  const headerFillStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.get(), [0, HEADER_FILL], [0, 1], Extrapolation.CLAMP),
+  }));
+  const addressBarStyle = useAnimatedStyle(() => {
+    const y = scrollY.get();
+    return {
+      height: interpolate(y, [0, ADDRESS_COLLAPSE], [44, 0], Extrapolation.CLAMP),
+      marginBottom: interpolate(y, [0, ADDRESS_COLLAPSE], [spacing.sm, 0], Extrapolation.CLAMP),
+      opacity: interpolate(y, [0, ADDRESS_COLLAPSE * 0.66], [1, 0], Extrapolation.CLAMP),
     };
-  }, [dockThreshold, scrollY]);
+  });
+  const categoryDockedStyle = useAnimatedStyle(() => {
+    const s = stickAt.get();
+    return {
+      opacity: interpolate(scrollY.get(), [s - DOCK_FADE, s], [0, 1], Extrapolation.CLAMP),
+    };
+  });
 
   const handleCategorySelect = (slug: string) => {
     setSelectedCategory(slug);
@@ -103,9 +153,7 @@ export default function HomeScreen() {
   // moment fresh slot data proves it closed — never display a dead choice.
   useEffect(() => {
     if (!slotSheetOpen || !slotList.data || !preferredSlot) return;
-    const stillOpen = slotList.data.some(
-      (s) => s.isOpen && slotKey(s) === preferredSlot.key,
-    );
+    const stillOpen = slotList.data.some((s) => s.isOpen && slotKey(s) === preferredSlot.key);
     if (!stillOpen) setPreferredSlot(null);
   }, [slotSheetOpen, slotList.data, preferredSlot]);
   const deliverTo = addresses.data?.find((a) => a.isDefault) ?? addresses.data?.[0];
@@ -167,104 +215,29 @@ export default function HomeScreen() {
   const shownSlot =
     preferredSlot ??
     (slot
-      ? { key: slotKey(slot), label: slot.label, deliveryDate: slot.deliveryDate }
+      ? {
+          key: slotKey(slot),
+          label: slot.label,
+          deliveryDate: slot.deliveryDate,
+        }
       : null);
   const stripHint =
     (slot && shownSlot && slotKey(slot) === shownSlot.key
       ? countdown(slot.secondsToCutoff)
       : null) ?? (preferredSlot ? 'Your slot' : null);
 
-  /* ---- Scroll-driven sticky header ---- */
-
-  // Background: transparent → white as user scrolls
-  const stickyBg = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: ['rgba(255,255,255,0)', 'rgba(255,255,255,0.97)'],
-    extrapolate: 'clamp',
-  });
-  // Shadow: 0 → visible
-  const stickyShadowOpacity = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: [0, 0.08],
-    extrapolate: 'clamp',
-  });
-  // Address bar collapses as user scrolls (height, opacity, spacing)
-  const addressBarHeight = scrollY.interpolate({
-    inputRange: [0, 60],
-    outputRange: [44, 0],
-    extrapolate: 'clamp',
-  });
-  const addressBarOpacity = scrollY.interpolate({
-    inputRange: [0, 40],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
-  const addressBarMargin = scrollY.interpolate({
-    inputRange: [0, 60],
-    outputRange: [spacing.sm, 0],
-    extrapolate: 'clamp',
-  });
-  // Elevation for Android (0 initially, ramps up with scroll)
-  const stickyElevation = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: [0, 4],
-    extrapolate: 'clamp',
-  });
-
-  // Docked category bar animations (stacks below search bar as scroll happens)
-  const dockedOpacity = scrollY.interpolate({
-    inputRange: [Math.max(0, dockThreshold - 15), dockThreshold],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-  const dockedHeight = scrollY.interpolate({
-    inputRange: [Math.max(0, dockThreshold - 15), dockThreshold],
-    outputRange: [0, 68],
-    extrapolate: 'clamp',
-  });
-  const dockedTranslateY = scrollY.interpolate({
-    inputRange: [Math.max(0, dockThreshold - 15), dockThreshold],
-    outputRange: [-4, 0],
-    extrapolate: 'clamp',
-  });
-  const inlineOpacity = scrollY.interpolate({
-    inputRange: [Math.max(0, dockThreshold - 1), dockThreshold],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
+  // Words for the rotating search hint, from what is actually on sale today.
+  const hintWords = buildHintWords(data);
 
   return (
     <Screen>
       {/* ---- Sticky header: address bar + search bar + categories stacked on scroll ---- */}
-      <Animated.View
-        style={[
-          styles.stickySearchWrap,
-          {
-            paddingTop: insets.top + spacing.sm,
-            backgroundColor: stickyBg,
-            shadowOpacity: stickyShadowOpacity,
-            elevation: stickyElevation,
-          },
-        ]}
-      >
+      <View style={[styles.stickySearchWrap, { paddingTop: insets.top + spacing.sm }]}>
+        <Animated.View style={[styles.whiteFill, headerFillStyle]} />
         <View style={styles.stickyTopContent}>
           {/* Address bar — collapses on scroll */}
-          <Animated.View
-            style={[
-              styles.heroTopBar,
-              {
-                height: addressBarHeight,
-                opacity: addressBarOpacity,
-                marginBottom: addressBarMargin,
-                overflow: 'hidden',
-              },
-            ]}
-          >
-            <Pressable
-              onPress={handleAddressPress}
-              hitSlop={6}
-              style={styles.deliverChip}
-            >
+          <Animated.View style={[styles.heroTopBar, styles.addressClip, addressBarStyle]}>
+            <Pressable onPress={handleAddressPress} hitSlop={6} style={styles.deliverChip}>
               <View style={styles.deliverIcon}>
                 <Feather name="map-pin" size={15} color="#FFFFFF" />
               </View>
@@ -272,11 +245,7 @@ export default function HomeScreen() {
                 <Text variant="tiny" uppercase style={styles.deliverKicker}>
                   Deliver to
                 </Text>
-                <Text
-                  variant="smallMedium"
-                  numberOfLines={1}
-                  style={styles.deliverName}
-                >
+                <Text variant="smallMedium" numberOfLines={1} style={styles.deliverName}>
                   {locationLabel}
                 </Text>
               </View>
@@ -304,259 +273,233 @@ export default function HomeScreen() {
                 params: { autofocus: Date.now().toString() },
               })
             }
+            onLayout={(e) => {
+              const h = Math.round(e.nativeEvent.layout.height);
+              if (h > 0 && h !== searchBarHeight) setSearchBarHeight(h);
+            }}
+            accessibilityRole="search"
+            accessibilityLabel="Search fish and seafood"
             style={styles.searchBar}
           >
             <Feather name="search" size={18} color="#9CA3AF" />
-            <Text variant="body" style={styles.searchPlaceholder}>
-              Search for..
-            </Text>
+            <RotatingSearchHint
+              words={hintWords}
+              style={styles.searchPlaceholder}
+              wordStyle={styles.searchWord}
+            />
           </Pressable>
         </View>
-
-        {/* Categories stacked below search bar in sticky header */}
-        {data.categories.length > 0 ? (
-          <Animated.View
-            style={[
-              styles.dockedCategoryWrap,
-              {
-                height: dockedHeight,
-                opacity: dockedOpacity,
-                transform: [{ translateY: dockedTranslateY }],
-              },
-            ]}
-            pointerEvents={isDocked ? 'auto' : 'none'}
-          >
-            <CategoryNav
-              categories={data.categories}
-              selectedSlug={selectedCategory}
-              onSelect={handleCategorySelect}
-            />
-          </Animated.View>
-        ) : null}
-      </Animated.View>
+      </View>
 
       <Animated.ScrollView
         contentContainerStyle={{ paddingBottom: TAB_BAR_CLEARANCE + 60 }}
-        refreshControl={
-          <RefreshControl refreshing={feed.isRefetching} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={feed.isRefetching} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false },
-        )}
+        onScroll={onScroll}
+        stickyHeaderIndices={data.categories.length > 0 && Platform.OS !== 'web' ? [1] : undefined}
       >
-        {/* ============================================================== */}
-        {/*  HERO — light lavender band with illustration compositing      */}
-        {/* ============================================================== */}
+        {/* Child 0: everything above the category bar. Its height tells us
+            the scroll offset at which the bar pins. */}
         <View
-          style={[
-            styles.hero,
-            { backgroundColor: HERO_BG, paddingTop: insets.top + 104 },
-          ]}
+          onLayout={(e) => {
+            const h = Math.round(e.nativeEvent.layout.height);
+            if (h !== aboveBarHeight) setAboveBarHeight(h);
+          }}
         >
-          {/* ---- Illustration zone ---- */}
-          <View style={styles.heroIllustration}>
-            {/* Fishing background — covers the full width, faded */}
-            <Image
-              source={heroFishingBg}
-              style={styles.heroBgImage}
-              resizeMode="cover"
-            />
+          {/* ============================================================== */}
+          {/*  HERO — light lavender band with illustration compositing      */}
+          {/* ============================================================== */}
+          <View style={[styles.hero, { backgroundColor: HERO_BG, paddingTop: insets.top + 104 }]}>
+            {/* ---- Illustration zone ---- */}
+            <View style={styles.heroIllustration}>
+              {/* Fishing background — covers the full width, faded */}
+              <Image source={heroFishingBg} style={styles.heroBgImage} resizeMode="cover" />
 
-            {/* Title text — centered above illustrations */}
-            <View style={styles.heroTitleWrap}>
-              <Text style={styles.heroTitle}>
-                Off the boat
-              </Text>
-              <Text style={styles.heroSubtitle}>
-                on your plate
-              </Text>
+              {/* Title text — centered above illustrations */}
+              <View style={styles.heroTitleWrap}>
+                <Text style={styles.heroTitle}>Off the boat</Text>
+                <Text style={styles.heroSubtitle}>on your plate</Text>
+              </View>
+
+              {/* Man eating fish — centered at the bottom */}
+              <Image source={heroManEating} style={styles.heroCharacter} resizeMode="contain" />
             </View>
-
-            {/* Man eating fish — centered at the bottom */}
-            <Image
-              source={heroManEating}
-              style={styles.heroCharacter}
-              resizeMode="contain"
-            />
           </View>
-        </View>
 
-        {/* ---- Delivery slot strip (moved below hero) ---- */}
-        {shownSlot ? (
-          <Pressable
-            onPress={() => setSlotSheetOpen(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Choose your delivery slot"
-            style={[
-              styles.slotStripNew,
-              { borderColor: colors.border, backgroundColor: colors.card },
-            ]}
-          >
-            <Feather
-              name={preferredSlot ? 'check-circle' : 'clock'}
-              size={14}
-              color={preferredSlot ? colors.success : colors.mutedForeground}
-            />
-            <Text variant="smallMedium" style={styles.flex}>
-              {deliveryDate(shownSlot.deliveryDate)} · {shownSlot.label}
-            </Text>
-            {stripHint ? (
-              <Text variant="tiny" style={{ color: colors.success }}>
-                {stripHint}
-              </Text>
-            ) : null}
-            <Feather
-              name="chevron-right"
-              size={15}
-              color={colors.mutedForeground}
-            />
-          </Pressable>
-        ) : null}
-
-        <Modal
-          visible={slotSheetOpen}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setSlotSheetOpen(false)}
-        >
-          <View style={styles.sheetRoot}>
+          {/* ---- Delivery slot strip (moved below hero) ---- */}
+          {shownSlot ? (
             <Pressable
-              style={styles.sheetScrim}
-              onPress={() => setSlotSheetOpen(false)}
-              accessibilityLabel="Close the slot picker"
-            />
-            <View
+              onPress={() => setSlotSheetOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Choose your delivery slot"
               style={[
-                styles.sheet,
-                {
-                  backgroundColor: colors.background,
-                  paddingBottom: insets.bottom + spacing.lg,
-                },
+                styles.slotStripNew,
+                { borderColor: colors.border, backgroundColor: colors.card },
               ]}
             >
-              <View
-                style={[styles.sheetHandle, { backgroundColor: colors.border }]}
+              <Feather
+                name={preferredSlot ? 'check-circle' : 'clock'}
+                size={14}
+                color={preferredSlot ? colors.success : colors.mutedForeground}
               />
-              <Text variant="section">Choose Delivery Slot</Text>
-              <Text variant="body" tone="muted" style={styles.sheetSub}>
-                Pick when the catch should reach you — it will already be
-                selected at checkout.
+              <Text variant="smallMedium" style={styles.flex}>
+                {deliveryDate(shownSlot.deliveryDate)} · {shownSlot.label}
               </Text>
-              {slotList.isLoading ? (
-                <ActivityIndicator
-                  color={colors.primary}
-                  style={styles.sheetBusy}
-                />
-              ) : slotList.isError ? (
-                <ErrorView
-                  message="Could not load delivery slots. Check your connection and try again."
-                  onRetry={() => slotList.refetch()}
-                />
-              ) : !slotList.data || slotList.data.length === 0 ? (
-                <Text variant="body" tone="muted" style={styles.sheetBusy}>
-                  Every slot has closed for now. Fresh slots open each morning
-                  at 6am.
+              {stripHint ? (
+                <Text variant="tiny" style={{ color: colors.success }}>
+                  {stripHint}
                 </Text>
-              ) : (
-                <Animated.ScrollView bounces={false} showsVerticalScrollIndicator={false}>
-                  <SlotPicker
-                    slots={slotList.data}
-                    selectedKey={shownSlot?.key ?? null}
-                    onSelect={(s) => {
-                      setPreferredSlot(s);
-                      setTimeout(() => {
-                        setSlotSheetOpen(false);
-                      }, 180);
-                    }}
-                  />
-                </Animated.ScrollView>
-              )}
-            </View>
-          </View>
-        </Modal>
+              ) : null}
+              <Feather name="chevron-right" size={15} color={colors.mutedForeground} />
+            </Pressable>
+          ) : null}
 
-        {/* Quick-Commerce Category Bar (Inline, smoothly docks below search bar on scroll) */}
-        {data.categories.length > 0 ? (
-          <Animated.View
-            onLayout={(e) => {
-              const y = e.nativeEvent.layout.y;
-              const headerBottom = insets.top + spacing.sm + 46 + spacing.sm;
-              if (y > 100) {
-                setDockThreshold(Math.max(100, y - headerBottom));
-              }
-            }}
-            style={[
-              styles.categorySection,
-              { opacity: inlineOpacity },
-            ]}
+          <Modal
+            visible={slotSheetOpen}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setSlotSheetOpen(false)}
           >
-            <CategoryNav
-              categories={data.categories}
-              selectedSlug={selectedCategory}
-              onSelect={handleCategorySelect}
-            />
-          </Animated.View>
-        ) : null}
-
-        {/* Today's catch */}
-        {data.todaysCatch.length > 0 ? (
-          <View style={styles.section}>
-            <SectionHeader
-              title="Today's catch"
-              caption="Landed this morning at Sassoon Dock"
-              onSeeAll={() => router.push('/(tabs)/shop')}
-            />
-            <Animated.ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.rail}
-            >
-              {data.todaysCatch.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </Animated.ScrollView>
-          </View>
-        ) : null}
-
-        {/* Popular */}
-        {data.popular.length > 0 ? (
-          <View style={styles.section}>
-            <SectionHeader
-              title="Mumbai's regulars"
-              caption="What our kitchens reorder"
-              onSeeAll={() => router.push('/(tabs)/shop')}
-            />
-            <View style={styles.grid}>
-              {data.popular.map((product) => (
-                <ProductCard key={product.id} product={product} width={gridWidth} />
-              ))}
+            <View style={styles.sheetRoot}>
+              <Pressable
+                style={styles.sheetScrim}
+                onPress={() => setSlotSheetOpen(false)}
+                accessibilityLabel="Close the slot picker"
+              />
+              <View
+                style={[
+                  styles.sheet,
+                  {
+                    backgroundColor: colors.background,
+                    paddingBottom: insets.bottom + spacing.lg,
+                  },
+                ]}
+              >
+                <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
+                <Text variant="section">Choose Delivery Slot</Text>
+                <Text variant="body" tone="muted" style={styles.sheetSub}>
+                  Pick when the catch should reach you — it will already be selected at checkout.
+                </Text>
+                {slotList.isLoading ? (
+                  <ActivityIndicator color={colors.primary} style={styles.sheetBusy} />
+                ) : slotList.isError ? (
+                  <ErrorView
+                    message="Could not load delivery slots. Check your connection and try again."
+                    onRetry={() => slotList.refetch()}
+                  />
+                ) : !slotList.data || slotList.data.length === 0 ? (
+                  <Text variant="body" tone="muted" style={styles.sheetBusy}>
+                    Every slot has closed for now. Fresh slots open each morning at 6am.
+                  </Text>
+                ) : (
+                  <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
+                    <SlotPicker
+                      slots={slotList.data}
+                      selectedKey={shownSlot?.key ?? null}
+                      onSelect={(s) => {
+                        setPreferredSlot(s);
+                        setTimeout(() => {
+                          setSlotSheetOpen(false);
+                        }, 180);
+                      }}
+                    />
+                  </ScrollView>
+                )}
+              </View>
             </View>
-          </View>
-        ) : null}
+          </Modal>
+        </View>
 
-        {/* Trust strip */}
-        <View style={styles.section}>
+        {/* Child 1: the category bar, pinned natively by the ScrollView.
+            The sticky wrapper reaches dockTop px above the bar (negative
+            margin + equal padding), so it pins when the bar meets the bottom
+            of the header. That top strip is transparent and lets touches
+            through to whatever is underneath. */}
+        {data.categories.length > 0 ? (
           <View
             style={[
-              styles.trust,
-              { backgroundColor: colors.accent, borderRadius: radii.xl },
+              styles.categorySticky,
+              Platform.OS === 'web'
+                ? // Web wraps native sticky children in its own box, so use CSS sticky directly.
+                  ({
+                    position: 'sticky',
+                    top: dockTop,
+                    marginTop: spacing.md,
+                  } as unknown as ViewStyle)
+                : { marginTop: spacing.md - dockTop, paddingTop: dockTop },
             ]}
           >
-            {[
-              { icon: 'droplet' as const, label: 'Never frozen' },
-              { icon: 'scissors' as const, label: 'Cut to order' },
-              { icon: 'thermometer' as const, label: '0–4 °C to your door' },
-            ].map((item) => (
-              <View key={item.label} style={styles.trustItem}>
-                <Feather name={item.icon} size={16} color={colors.primary} />
-                <Text variant="tiny" tone="muted" style={styles.trustLabel}>
-                  {item.label}
-                </Text>
+            <View>
+              <Animated.View style={[styles.whiteFill, categoryDockedStyle]} />
+              <Animated.View style={[styles.shade, categoryDockedStyle]}>
+                <LinearGradient colors={SHADE_COLORS} style={StyleSheet.absoluteFill} />
+              </Animated.View>
+              <CategoryNav
+                categories={data.categories}
+                selectedSlug={selectedCategory}
+                onSelect={handleCategorySelect}
+              />
+            </View>
+          </View>
+        ) : null}
+
+        {/* Child 2: the rest of the page. */}
+        <View>
+          {/* Today's catch */}
+          {data.todaysCatch.length > 0 ? (
+            <View style={styles.section}>
+              <SectionHeader
+                title="Today's catch"
+                caption="Landed this morning at Sassoon Dock"
+                onSeeAll={() => router.push('/(tabs)/shop')}
+              />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.rail}
+              >
+                {data.todaysCatch.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </ScrollView>
+            </View>
+          ) : null}
+
+          {/* Popular */}
+          {data.popular.length > 0 ? (
+            <View style={styles.section}>
+              <SectionHeader
+                title="Mumbai's regulars"
+                caption="What our kitchens reorder"
+                onSeeAll={() => router.push('/(tabs)/shop')}
+              />
+              <View style={styles.grid}>
+                {data.popular.map((product) => (
+                  <ProductCard key={product.id} product={product} width={gridWidth} />
+                ))}
               </View>
-            ))}
+            </View>
+          ) : null}
+
+          {/* Trust strip */}
+          <View style={styles.section}>
+            <View
+              style={[styles.trust, { backgroundColor: colors.accent, borderRadius: radii.xl }]}
+            >
+              {[
+                { icon: 'droplet' as const, label: 'Never frozen' },
+                { icon: 'scissors' as const, label: 'Cut to order' },
+                { icon: 'thermometer' as const, label: '0–4 °C to your door' },
+              ].map((item) => (
+                <View key={item.label} style={styles.trustItem}>
+                  <Feather name={item.icon} size={16} color={colors.primary} />
+                  <Text variant="tiny" tone="muted" style={styles.trustLabel}>
+                    {item.label}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
         </View>
       </Animated.ScrollView>
@@ -564,6 +507,33 @@ export default function HomeScreen() {
       <CartBar offset={TAB_BAR_CLEARANCE - 46} />
     </Screen>
   );
+}
+
+const SHADE_COLORS = ['rgba(11,26,61,0.09)', 'rgba(11,26,61,0)'] as const;
+
+/**
+ * Category short names interleaved with today's catch, so the hint names
+ * things a customer can actually buy right now. Long names are skipped so the
+ * hint never truncates.
+ */
+function buildHintWords(data: {
+  categories: Parameters<typeof getCategoryNavItems>[0];
+  todaysCatch: { name: string }[];
+}): string[] {
+  const cats = getCategoryNavItems(data.categories)
+    .filter((t) => t.slug !== 'all' && t.slug !== 'ready-to-cook')
+    .map((t) => t.name);
+  const catch_ = data.todaysCatch.map((p) => p.name.trim());
+  const out: string[] = [];
+  for (let i = 0; i < Math.max(cats.length, catch_.length); i++) {
+    if (cats[i]) out.push(cats[i]);
+    if (catch_[i]) out.push(catch_[i]);
+  }
+  const seen = new Set<string>();
+  return out
+    .filter((w) => w.length > 0 && w.length <= 14)
+    .filter((w) => (seen.has(w.toLowerCase()) ? false : (seen.add(w.toLowerCase()), true)))
+    .slice(0, 8);
 }
 
 function SectionHeader({
@@ -609,18 +579,24 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    // elevation and shadowOpacity are animated via inline style
   },
+  whiteFill: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FFFFFF',
+  },
+  /** Soft drop shadow hung just below a layer; works the same on both platforms. */
+  shade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '100%',
+    height: 8,
+    pointerEvents: 'none',
+  },
+  addressClip: { overflow: 'hidden' },
   stickyTopContent: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
-  },
-  dockedCategoryWrap: {
-    width: '100%',
-    overflow: 'hidden',
   },
 
   /* ------ NEW hero styles ------ */
@@ -686,10 +662,14 @@ const styles = StyleSheet.create({
     borderColor: HERO_SEARCH_BORDER,
   },
   searchPlaceholder: {
-    flex: 1,
     color: '#9CA3AF',
     fontFamily: fonts.body,
     fontSize: 14,
+    lineHeight: 20,
+  },
+  searchWord: {
+    color: '#6B7280',
+    fontFamily: fonts.bodyMedium,
   },
 
   /* Illustration zone */
@@ -773,7 +753,8 @@ const styles = StyleSheet.create({
   },
   sheetSub: { marginTop: 4, marginBottom: spacing.md },
   sheetBusy: { marginVertical: spacing.lg },
-  categorySection: { marginTop: spacing.md },
+  // Transparent top strip must not swallow taps meant for the slot strip.
+  categorySticky: { zIndex: 10, pointerEvents: 'box-none' },
   section: { marginTop: spacing.xl, paddingHorizontal: spacing.lg },
   sectionHeader: { marginBottom: spacing.md },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

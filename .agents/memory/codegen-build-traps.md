@@ -87,3 +87,8 @@ can reintroduce it with a different helper name.
 
 **How to apply:** when codegen fails on a `Property 'x' does not exist on type 'typeof zod'`,
 add the rewrite to the postprocessor rather than touching generated output or the spec.
+
+# API dev script: NODE_ENV must reach the server process
+`cross-env NODE_ENV=development a && b` only sets it for `a`. Without it the API treats itself as public: no CORS for the Expo web origin (preflight 200 with no allow-origin header) and the dev OTP is off, which surfaces as "We could not reach the fish counter".
+**Why:** cost a debugging round when `.env.local` (which used to hide this) went missing.
+**How to apply:** keep `cross-env NODE_ENV=development` on the run step too; dev OTP lives in the development env var AUTH_MOCK_OTP.

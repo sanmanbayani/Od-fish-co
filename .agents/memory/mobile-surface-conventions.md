@@ -67,3 +67,10 @@ well-formed but fake `ExponentPushToken[...]`, send to it, and confirm the push
 service answers `DeviceNotRegistered` and the row is deleted. That exercises
 copy, batching, transport and dead-token cleanup — everything except the last
 hop. Real end-to-end verification waits for a real build.
+
+## Sticky elements: one instance, pinned by the ScrollView itself
+
+The home category bar is a single element. On native it is pinned with `stickyHeaderIndices`. The sticky child has a negative top margin and an equal top padding, both the header height, and `pointerEvents: 'box-none'`, so it pins under the header instead of at the top of the screen. On web it uses CSS `position: sticky; top: <header height>`, because react-native-web wraps sticky children in its own box and ignores that trick.
+
+**Why:** a two-copy crossfade showed both bars during a slow scroll. Translating one bar from a Reanimated scroll handler shook while pinned, because the handler lands a frame after the native scroll. The native sticky header moves in the same frame.
+**How to apply:** never position anything scroll-pinned from a JS or worklet scroll handler. Use handlers only for opacity and fold effects, where a frame of lag is invisible. Remember that RN's sticky header swallows the child's own `onLayout`, so measure the block above the bar instead.

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Circle, G, Path } from 'react-native-svg';
 import type { Category } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { radii, spacing } from '@/constants/colors';
@@ -8,189 +8,192 @@ import { fonts } from '@/constants/typography';
 import { Text } from '@/components/ui/Text';
 
 /* ------------------------------------------------------------------ */
-/* Vector Line-Art Icons (matching Quick-Commerce reference aesthetic) */
+/* Category icons                                                      */
 /* ------------------------------------------------------------------ */
+/*
+ * One line-art family on a 24px grid: 1.6px round strokes, filled dots for
+ * eyes. Each icon draws the actual product (a whole fish, a curled prawn, a
+ * crab with pincers, fish hung out to dry, a fish in the pan) so the bar
+ * reads at a glance without the labels.
+ */
 
 interface IconProps {
   color?: string;
   size?: number;
 }
 
-/** Shopping basket with handles for the "All" counter tab (matching Image 2) */
+const STROKE = 1.6;
+
+function Lines({ d, color, width = STROKE }: { d: string[]; color: string; width?: number }) {
+  return (
+    <>
+      {d.map((path) => (
+        <Path
+          key={path}
+          d={path}
+          stroke={color}
+          strokeWidth={width}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ))}
+    </>
+  );
+}
+
+/** Side-on fish: body, forked tail, dorsal and belly fins, gill line. */
+const FISH_BODY = [
+  'M2.8 12C5.4 8.2 10.6 7 14.8 9.4C15.9 10 16.9 10.9 17.6 12C16.9 13.1 15.9 14 14.8 14.6C10.6 17 5.4 15.8 2.8 12Z',
+  'M17.6 12L21.2 8.6V15.4L17.6 12Z',
+  'M8.4 9.5C9.2 11 9.2 13 8.4 14.5',
+];
+const FISH_DORSAL = 'M9 8.1L10.8 5.8L13.6 8.7';
+const FISH_BELLY = 'M11 15.9L12.2 17.8L13.8 15.4';
+
+/** The fish drawn at any position/scale; stroke is compensated so it stays 1.6px. */
+function FishShape({
+  color,
+  transform,
+  scale = 1,
+  fins = 'both',
+}: {
+  color: string;
+  transform?: string;
+  scale?: number;
+  fins?: 'both' | 'dorsal' | 'none';
+}) {
+  const d = [...FISH_BODY];
+  if (fins !== 'none') d.push(FISH_DORSAL);
+  if (fins === 'both') d.push(FISH_BELLY);
+  return (
+    <G transform={transform}>
+      <Lines d={d} color={color} width={STROKE / scale} />
+      <Circle cx="5.9" cy="11.3" r="0.9" fill={color} />
+    </G>
+  );
+}
+
+/** All: a market basket with today's fish on top. */
 export function BasketIcon({ color = '#0B1A3D', size = 25 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M3.5 10C3.5 9.45 3.95 9 4.5 9H19.5C20.05 9 20.5 9.45 20.5 10L19.2 18.2C19 19.3 18.06 20.1 16.94 20.1H7.06C5.94 20.1 5 19.3 4.8 18.2L3.5 10Z"
-        stroke={color}
-        strokeWidth={1.75}
-        strokeLinejoin="round"
+      <Lines
+        color={color}
+        d={[
+          'M3 11.5H21',
+          'M4.2 11.5L5.5 18.9C5.7 19.9 6.5 20.6 7.6 20.6H16.4C17.5 20.6 18.3 19.9 18.5 18.9L19.8 11.5',
+          'M9 14.4V17.8',
+          'M12 14.4V17.8',
+          'M15 14.4V17.8',
+        ]}
       />
-      <Path
-        d="M8.5 9L12 4.5L15.5 9"
-        stroke={color}
-        strokeWidth={1.75}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M4 14H20"
-        stroke={color}
-        strokeWidth={1.3}
-        strokeLinecap="round"
+      <FishShape
+        color={color}
+        scale={0.52}
+        fins="none"
+        transform="translate(12 6.6) rotate(-18) scale(0.52) translate(-12 -12)"
       />
     </Svg>
   );
 }
 
-/** Fresh fish outline icon (matching Image 1's fish icon) */
+/** Fish: a whole fresh fish. */
 export function FishIcon({ color = '#0B1A3D', size = 25 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M18.8 12C15.2 7.6 8.5 8 4 12C8.5 16 15.2 16.4 18.8 12Z"
-        stroke={color}
-        strokeWidth={1.75}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M18.2 12L21.5 8.5M18.2 12L21.5 15.5"
-        stroke={color}
-        strokeWidth={1.75}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Circle cx="8" cy="11.5" r="1.1" fill={color} />
-      <Path
-        d="M11 10C11.5 11.2 11.5 12.8 11 14"
-        stroke={color}
-        strokeWidth={1.4}
-        strokeLinecap="round"
-      />
+      <FishShape color={color} />
     </Svg>
   );
 }
 
-/** Prawn / shrimp outline icon */
+/** Prawns: curled, segmented body with a tail fan and long antennae. */
 export function PrawnIcon({ color = '#0B1A3D', size = 25 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M17.5 11.5C18.5 10 18 7.5 16 6C14 4.5 11 5 9.5 7C7.5 9.5 6.5 13 8 16C9.2 18.5 12 19.5 14.5 18.5C16.5 17.5 17 15.5 16 14C15 12.5 12.5 12.5 11.5 14"
-        stroke={color}
-        strokeWidth={1.75}
-        strokeLinecap="round"
-        strokeLinejoin="round"
+      <Lines
+        color={color}
+        d={[
+          'M17.6 6.3C13 4.3 7 6.6 5.6 11.4C4.4 15.6 7.4 19.6 11.8 19.6',
+          'M17.8 10C14.4 8.6 10.6 10 9.8 12.6C9.2 14.6 10.4 16.4 12.2 16.4',
+          'M17.6 6.3C19.5 7 19.8 9.3 17.8 10',
+          'M12.2 16.4L15.8 15.6L14.8 18.1L15.8 20.6L11.8 19.6',
+          'M8.4 8.5L11 10.7',
+          'M5.9 12.4L9.6 13.2',
+          'M7.4 17.2L10.4 15.6',
+          'M18.9 7.2L22 4.4',
+          'M19.2 8.6L22.4 8.4',
+        ]}
       />
-      <Path
-        d="M13 6L10.5 8.5M10 8.5L7.5 12M7.2 12.5L6.5 15"
-        stroke={color}
-        strokeWidth={1.3}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M16 6C18 4 21 3.5 22 4"
-        stroke={color}
-        strokeWidth={1.3}
-        strokeLinecap="round"
-      />
+      <Circle cx="16.4" cy="7.7" r="0.85" fill={color} />
     </Svg>
   );
 }
 
-/** Crab outline icon with claws & legs */
+/** Crabs: shell, two open pincers, three legs a side, eyes on stalks. */
 export function CrabIcon({ color = '#0B1A3D', size = 25 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M6 13C6 9.8 8.7 7.2 12 7.2C15.3 7.2 18 9.8 18 13C18 16.2 15.3 18.8 12 18.8C8.7 18.8 6 16.2 6 13Z"
-        stroke={color}
-        strokeWidth={1.75}
-        strokeLinejoin="round"
+      <Lines
+        color={color}
+        d={[
+          'M6.5 14.2C6.5 11.9 9 10.2 12 10.2C15 10.2 17.5 11.9 17.5 14.2C17.5 16.5 15 18.2 12 18.2C9 18.2 6.5 16.5 6.5 14.2Z',
+          'M7.8 11.6L5.4 8.6',
+          'M5.4 8.6C3.5 8.2 2.6 6.3 3.4 4.6L5.1 6.5L5.7 4.2C7.2 5.4 7.1 7.6 5.4 8.6Z',
+          'M16.2 11.6L18.6 8.6',
+          'M18.6 8.6C20.5 8.2 21.4 6.3 20.6 4.6L18.9 6.5L18.3 4.2C16.8 5.4 16.9 7.6 18.6 8.6Z',
+          'M6.6 14.6L3.2 13.8',
+          'M7.2 16.6L3.8 18',
+          'M9.2 17.8L7 20.6',
+          'M17.4 14.6L20.8 13.8',
+          'M16.8 16.6L20.2 18',
+          'M14.8 17.8L17 20.6',
+          'M10.4 10.2V8.8',
+          'M13.6 10.2V8.8',
+        ]}
       />
-      <Path
-        d="M7.5 9.5C6 7.5 4 6.5 3 7.5C2 8.5 3 10.5 5 11.5"
-        stroke={color}
-        strokeWidth={1.75}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M16.5 9.5C18 7.5 20 6.5 21 7.5C22 8.5 21 10.5 19 11.5"
-        stroke={color}
-        strokeWidth={1.75}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Circle cx="10" cy="7.5" r="0.9" fill={color} />
-      <Circle cx="14" cy="7.5" r="0.9" fill={color} />
-      <Path
-        d="M4.5 14L3 16M4.5 16.5L3 19M19.5 14L21 16M19.5 16.5L21 19"
-        stroke={color}
-        strokeWidth={1.4}
-        strokeLinecap="round"
-      />
+      <Circle cx="10.4" cy="8.3" r="0.8" fill={color} />
+      <Circle cx="13.6" cy="8.3" r="0.8" fill={color} />
     </Svg>
   );
 }
 
-/** Dried fish outline icon with sun cure marks */
+/** Dried Fish: two fish hung tail-up from a drying line. */
 export function DriedFishIcon({ color = '#0B1A3D', size = 25 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M19.5 12.5C15.8 8.8 9.2 9.5 4.5 12.5C9.2 15.5 15.8 16.2 19.5 12.5Z"
-        stroke={color}
-        strokeWidth={1.75}
-        strokeLinecap="round"
-        strokeLinejoin="round"
+      <Lines color={color} d={['M2.5 3.8H21.5', 'M7.5 3.8V5.4', 'M16.5 3.8V5.4']} />
+      <FishShape
+        color={color}
+        scale={0.62}
+        fins="dorsal"
+        transform="translate(7.5 12.6) rotate(-90) scale(0.62) translate(-12 -12)"
       />
-      <Path
-        d="M19 12.5L22 9.5M19 12.5L22 15.5"
-        stroke={color}
-        strokeWidth={1.75}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M12 3V5.5M7.5 4.5L9 6.5M16.5 4.5L15 6.5"
-        stroke={color}
-        strokeWidth={1.4}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M9.5 11L8.5 14M12.5 11L11.5 14M15.5 11L14.5 14"
-        stroke={color}
-        strokeWidth={1.3}
-        strokeLinecap="round"
+      <FishShape
+        color={color}
+        scale={0.62}
+        fins="dorsal"
+        transform="translate(16.5 12.6) rotate(-90) scale(0.62) translate(-12 -12)"
       />
     </Svg>
   );
 }
 
-/** Skillet / cooking pan outline icon with steam */
+/** Ready to Cook: a cleaned fish already in the pan, steam rising. */
 export function CookingPanIcon({ color = '#0B1A3D', size = 25 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M4 13.5C4 11.5 5.8 10 8 10H16C18.2 10 20 11.5 20 13.5C20 15.5 18.2 17 16 17H8C5.8 17 4 15.5 4 13.5Z"
-        stroke={color}
-        strokeWidth={1.75}
-        strokeLinejoin="round"
+      <Lines
+        color={color}
+        d={[
+          'M3.5 14C3.5 10.4 6.4 7.5 10 7.5C13.6 7.5 16.5 10.4 16.5 14C16.5 17.6 13.6 20.5 10 20.5C6.4 20.5 3.5 17.6 3.5 14Z',
+          'M16 11.6L21.4 8.6',
+          'M6.4 14C7.6 12.3 10.4 11.9 12.4 14C10.4 16.1 7.6 15.7 6.4 14Z',
+          'M12.4 14L14 12.8V15.2L12.4 14Z',
+          'M7.8 5.2C7.2 4.4 8.4 3.6 7.8 2.6',
+          'M11.6 5.2C11 4.4 12.2 3.6 11.6 2.6',
+        ]}
       />
-      <Path
-        d="M20 13.5H23"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M8.5 7C8.5 5.5 9.5 5 9.5 4M12 7C12 5.5 13 5 13 4M15.5 7C15.5 5.5 16.5 5 16.5 4"
-        stroke={color}
-        strokeWidth={1.4}
-        strokeLinecap="round"
-      />
+      <Circle cx="8.2" cy="13.7" r="0.55" fill={color} />
     </Svg>
   );
 }
@@ -281,9 +284,22 @@ export function CategoryNav({
 }) {
   const colors = useColors();
   const tabs = getCategoryNavItems(categories);
+  // Tab width follows the bar's own width so that, on any phone, exactly five
+  // whole tabs fill the first fold; the rest appear only on scroll.
+  const [barWidth, setBarWidth] = useState(0);
+  const tabWidth =
+    barWidth > 0
+      ? Math.max(MIN_TAB_WIDTH, (barWidth - BAR_INSET * 2) / TABS_IN_VIEW)
+      : MIN_TAB_WIDTH;
 
   return (
-    <View style={[styles.container, { borderBottomColor: colors.border }]}>
+    <View
+      style={[styles.container, { borderBottomColor: colors.border }]}
+      onLayout={(e) => {
+        const w = Math.round(e.nativeEvent.layout.width);
+        if (w !== barWidth) setBarWidth(w);
+      }}
+    >
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -300,7 +316,7 @@ export function CategoryNav({
               onPress={() => onSelect(tab.slug)}
               style={({ pressed }) => [
                 styles.tabItem,
-                { opacity: pressed ? 0.75 : 1 },
+                { width: tabWidth, opacity: pressed ? 0.75 : 1 },
               ]}
               hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
             >
@@ -320,8 +336,12 @@ export function CategoryNav({
                     color: isActive ? colors.foreground : colors.mutedForeground,
                     fontFamily: isActive ? fonts.bodyBold : fonts.bodyMedium,
                   },
+                  // Long names (e.g. "Ready to Cook") step down so they fit the fixed tab width.
+                  tab.name.length > 9 && styles.tabLabelLong,
                 ]}
                 numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
               >
                 {tab.name}
               </Text>
@@ -355,21 +375,24 @@ export function CategoryTile({
   return null;
 }
 
+/** Exactly five whole tabs in the first fold, no partly cut-off tab. */
+const TABS_IN_VIEW = 5;
+const BAR_INSET = spacing.sm;
+const MIN_TAB_WIDTH = 56;
+
 const styles = StyleSheet.create({
   container: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     paddingTop: 6,
   },
   scrollContent: {
-    paddingHorizontal: spacing.lg,
-    gap: 10,
+    paddingHorizontal: BAR_INSET,
     alignItems: 'center',
   },
   tabItem: {
     alignItems: 'center',
     paddingTop: 4,
-    minWidth: 76,
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
   },
   iconWrap: {
     width: 32,
@@ -399,6 +422,7 @@ const styles = StyleSheet.create({
     marginBottom: 7,
     textAlign: 'center',
   },
+  tabLabelLong: { fontSize: 10.5, letterSpacing: -0.2 },
   indicator: {
     width: 26,
     height: 3,
