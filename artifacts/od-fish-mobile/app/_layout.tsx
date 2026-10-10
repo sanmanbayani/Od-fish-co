@@ -34,7 +34,7 @@ import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as WebBrowser from 'expo-web-browser';
 import { StatusBar } from 'expo-status-bar';
-import colors from '@/constants/colors';
+import colors, { deepInk } from '@/constants/colors';
 import { fonts } from '@/constants/typography';
 import { AuthProvider } from '@/lib/auth';
 import { orderIdFrom } from '@/lib/notifications';
@@ -120,7 +120,12 @@ function RootLayoutNav() {
       */}
       <Stack.Screen
         name="onboarding"
-        options={{ headerShown: false, animation: 'fade' }}
+        options={{
+          headerShown: false,
+          animation: 'fade',
+          // Ink, not cream, so the fade from the splash never flashes paper.
+          contentStyle: { backgroundColor: deepInk },
+        }}
       />
       <Stack.Screen
         name="login"
@@ -167,7 +172,7 @@ export default function RootLayout() {
   });
 
   // The boot decision and the splash are independent: the first-launch read
-  // resolves in milliseconds while the splash runs for seconds, so the target
+  // resolves in milliseconds while the splash holds for most of a second, so the target
   // screen is already painted beneath the overlay by the time it fades. That is
   // what makes the hand-off seamless rather than a second flash.
   const [splashDone, setSplashDone] = useState(false);

@@ -9,9 +9,9 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/icon.png",
+      "image": "./assets/images/splash-mark.png",
       "resizeMode": "contain",
-      "backgroundColor": "#F8F6F1"
+      "backgroundColor": "#08142E"
     },
     "ios": {
       "supportsTablet": false
@@ -30,6 +30,15 @@
       "expo-router",
       "expo-font",
       "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-mark.png",
+          "imageWidth": 120,
+          "resizeMode": "contain",
+          "backgroundColor": "#08142E"
+        }
+      ],
       [
         "expo-notifications",
         {
