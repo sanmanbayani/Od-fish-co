@@ -1,10 +1,13 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Dimensions,
   Easing,
+  Image,
   Pressable,
   StyleSheet,
+  TextInput,
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -14,19 +17,24 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { useRequestOtp, useVerifyOtp } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
-import { deepInk, mint, overlay, radii, spacing } from '@/constants/colors';
+import { radii, spacing } from '@/constants/colors';
 import { fonts } from '@/constants/typography';
 import { apiErrorMessage } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
 import { supabase, supabaseConfigured } from '@/lib/supabase';
 import { API_BASE_URL } from '@/lib/api';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
-import { LogoGlyph } from '@/components/BrandMark';
 import { GoogleMark } from '@/components/GoogleMark';
 import { Text } from '@/components/ui/Text';
-import { Button } from '@/components/ui/Button';
-import { TextField } from '@/components/ui/TextField';
 import { OtpInput } from '@/components/ui/OtpInput';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const HERO_HEIGHT = 260;
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const heroBg = require('@/assets/images/hero-fishing-bg.png');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const heroMan = require('@/assets/images/hero-man-eating.png');
 
 export default function LoginScreen() {
   const colors = useColors();
@@ -231,336 +239,495 @@ export default function LoginScreen() {
     }
   };
 
-  const headline = useMemo(
-    () =>
-      step === 'phone'
-        ? 'The catch of the\nday, at your door.'
-        : `Enter the code\nwe just sent.`,
-    [step],
+  /* =============================== PHONE STEP ============================== */
+
+  const renderPhoneStep = () => (
+    <Animated.View
+      style={{
+        opacity: stepAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [1, 0],
+        }),
+      }}
+    >
+      <Text style={styles.heading}>Sign in or create an account</Text>
+
+      {/* ---- phone input row ---- */}
+      <View style={styles.phoneRow}>
+        {/* Country code chip */}
+        <View style={[styles.countryChip, { borderColor: colors.border }]}>
+          <Text style={styles.flag}>🇮🇳</Text>
+          <Feather name="chevron-down" size={14} color={colors.mutedForeground} />
+        </View>
+
+        {/* Phone number field */}
+        <View style={[styles.phoneField, { borderColor: error ? colors.destructive : colors.border }]}>
+          <Text style={styles.phonePrefix}>+91</Text>
+          <View style={styles.phoneSeparator} />
+          <Animated.View style={styles.phoneInputWrap}>
+            {/* We use a native TextInput for the phone field */}
+            <PhoneTextInput
+              value={phone}
+              onChangeText={(t: string) => {
+                setPhone(t.replace(/\D/g, ''));
+                if (error) setError(null);
+              }}
+              onSubmitEditing={onSendOtp}
+              placeholder="Enter mobile number"
+              placeholderTextColor={colors.mutedForeground}
+              colors={colors}
+            />
+          </Animated.View>
+        </View>
+      </View>
+
+      {error ? (
+        <Text variant="small" tone="danger" style={styles.errorText}>
+          {error}
+        </Text>
+      ) : null}
+
+      {/* ---- Continue button ---- */}
+      <Pressable
+        accessibilityRole="button"
+        onPress={onSendOtp}
+        disabled={!phoneValid || requestOtp.isPending}
+        style={({ pressed }) => [
+          styles.continueBtn,
+          {
+            backgroundColor: colors.primary,
+            opacity: !phoneValid || requestOtp.isPending ? 0.45 : pressed ? 0.85 : 1,
+          },
+        ]}
+      >
+        {requestOtp.isPending ? (
+          <ActivityIndicator size="small" color={colors.primaryForeground} />
+        ) : (
+          <Text style={[styles.continueBtnLabel, { color: colors.primaryForeground }]}>
+            Continue
+          </Text>
+        )}
+      </Pressable>
+
+      {/* ---- "or" divider ---- */}
+      <View style={styles.dividerRow}>
+        <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+        <Text variant="small" tone="muted" style={styles.dividerText}>
+          or
+        </Text>
+        <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+      </View>
+
+      {/* ---- Google sign-in ---- */}
+      {supabaseConfigured ? (
+        <Pressable
+          onPress={onGoogleSignIn}
+          disabled={googleLoading}
+          accessibilityRole="button"
+          style={({ pressed }) => [
+            styles.googleBtn,
+            {
+              borderColor: colors.border,
+              opacity: googleLoading ? 0.6 : pressed ? 0.9 : 1,
+            },
+          ]}
+        >
+          {googleLoading ? (
+            <ActivityIndicator size="small" color={colors.foreground} />
+          ) : (
+            <GoogleMark size={18} />
+          )}
+          <Text style={[styles.googleLabel, { color: colors.mutedForeground }]}>
+            Continue with google
+          </Text>
+        </Pressable>
+      ) : null}
+    </Animated.View>
   );
 
-  return (
-    <View style={styles.root}>
-      <KeyboardAwareScrollViewCompat
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + 32 },
+  /* ================================ OTP STEP =============================== */
+
+  const renderOtpStep = () => (
+    <Animated.View style={{ opacity: stepAnim }}>
+      {/* Back navigation */}
+      <Pressable
+        onPress={() => {
+          setStep('phone');
+          setOtp('');
+          setError(null);
+        }}
+        hitSlop={10}
+        style={styles.backRow}
+      >
+        <Feather name="arrow-left" size={18} color={colors.primary} />
+        <Text style={[styles.backLabel, { color: colors.primary }]}>
+          +91 {phone}
+        </Text>
+      </Pressable>
+
+      <Text style={[styles.heading, { marginTop: 16 }]}>
+        Enter verification code
+      </Text>
+      <Text variant="body" tone="muted" style={styles.otpSub}>
+        We've sent a 6-digit code to +91 {phone}
+      </Text>
+
+      <View style={styles.otpSection}>
+        <OtpInput
+          value={otp}
+          onChange={(next) => {
+            setOtp(next);
+            if (error) setError(null);
+          }}
+          onComplete={onVerify}
+          error={error}
+          autoFocus
+        />
+      </View>
+
+      {devOtp ? (
+        <View style={[styles.hint, { backgroundColor: colors.accent }]}>
+          <Feather name="info" size={13} color={colors.mutedForeground} />
+          <Text variant="small" tone="muted" style={styles.flex}>
+            No SMS provider is live yet, so your code is{' '}
+            <Text variant="smallMedium" tone="primary">
+              {devOtp}
+            </Text>
+            .
+          </Text>
+        </View>
+      ) : mockAuth ? (
+        <View style={[styles.hint, { backgroundColor: colors.accent }]}>
+          <Feather name="info" size={13} color={colors.mutedForeground} />
+          <Text variant="small" tone="muted" style={styles.flex}>
+            Demo sign-in is switched on — enter the shared demo code.
+            Real SMS goes live once mobile-number registration clears.
+          </Text>
+        </View>
+      ) : null}
+
+      {/* ---- Verify button ---- */}
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => onVerify()}
+        disabled={otp.length !== 6 || verifyOtp.isPending}
+        style={({ pressed }) => [
+          styles.continueBtn,
+          {
+            backgroundColor: colors.primary,
+            opacity: otp.length !== 6 || verifyOtp.isPending ? 0.45 : pressed ? 0.85 : 1,
+          },
         ]}
+      >
+        {verifyOtp.isPending ? (
+          <ActivityIndicator size="small" color={colors.primaryForeground} />
+        ) : (
+          <Text style={[styles.continueBtnLabel, { color: colors.primaryForeground }]}>
+            Verify & continue
+          </Text>
+        )}
+      </Pressable>
+
+      {/* ---- Resend row ---- */}
+      <View style={styles.resendRow}>
+        {secondsLeft > 0 ? (
+          <Text variant="small" tone="muted">
+            Resend code in {Math.floor(secondsLeft / 60)}:
+            {String(secondsLeft % 60).padStart(2, '0')}
+          </Text>
+        ) : (
+          <Pressable onPress={onSendOtp} hitSlop={8}>
+            <Text variant="smallMedium" tone="primary" style={styles.resendLink}>
+              Resend OTP
+            </Text>
+          </Pressable>
+        )}
+      </View>
+    </Animated.View>
+  );
+
+  /* =============================== RENDER ================================== */
+
+  return (
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <KeyboardAwareScrollViewCompat
+        contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         bottomOffset={96}
         showsVerticalScrollIndicator={false}
       >
-        {/* ----------------------------- masthead ---------------------------- */}
-        <View style={styles.topRow}>
-          {/* `mint`, not the default navy — the mark sits on the deep band here
-              and a navy glyph on navy is invisible. */}
-          <View style={styles.brandRow}>
-            <LogoGlyph width={34} color={mint} />
-            <Text style={styles.brandWord}>OD Fish Co.</Text>
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Close"
-            onPress={close}
-            hitSlop={14}
-            style={[styles.close, { borderColor: overlay.hairline }]}
-          >
-            <Feather name="x" size={17} color="#F8F6F1" />
-          </Pressable>
+        {/* =============================== HERO ============================== */}
+        <View style={styles.heroBanner}>
+          <Image
+            source={heroBg}
+            style={styles.heroBgImage}
+            resizeMode="cover"
+          />
+          <Image
+            source={heroMan}
+            style={styles.heroManImage}
+            resizeMode="contain"
+          />
+          {/* Soft bottom fade from illustration into the white card */}
+          <View style={styles.heroFade} />
         </View>
 
-        <View style={styles.hero}>
-          {step === 'otp' ? (
-            <Pressable
-              onPress={() => {
-                setStep('phone');
-                setOtp('');
-                setError(null);
-              }}
-              hitSlop={10}
-              style={styles.backRow}
-            >
-              <Feather name="arrow-left" size={15} color={mint} />
-              <Text style={styles.backLabel}>+91 {phone}</Text>
-            </Pressable>
-          ) : (
-            <Text style={styles.kicker}>SIGN IN OR CREATE AN ACCOUNT</Text>
-          )}
+        {/* ============================= FORM CARD ============================ */}
+        <View style={[styles.formCard, { paddingBottom: insets.bottom + 24 }]}>
+          {step === 'phone' ? renderPhoneStep() : renderOtpStep()}
 
-          <Text style={styles.headline}>{headline}</Text>
-          <Text style={styles.sub}>
-            {step === 'phone'
-              ? 'One number, no password. We use it for order updates and to let your rider reach you.'
-              : 'Six digits, valid for five minutes.'}
-          </Text>
-        </View>
-
-        {/* ------------------------------- sheet ---------------------------- */}
-        <View style={[styles.sheet, { backgroundColor: colors.background }]}>
-          {step === 'phone' ? (
-            <Animated.View
-              style={{
-                opacity: stepAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [1, 0],
-                }),
-              }}
-            >
-              {supabaseConfigured ? (
-                <>
-                  <Pressable
-                    onPress={onGoogleSignIn}
-                    disabled={googleLoading}
-                    accessibilityRole="button"
-                    style={({ pressed }) => [
-                      styles.googleBtn,
-                      {
-                        backgroundColor: colors.card,
-                        borderColor: colors.border,
-                        opacity: googleLoading ? 0.6 : pressed ? 0.9 : 1,
-                      },
-                    ]}
-                  >
-                    {googleLoading ? (
-                      <ActivityIndicator size="small" color={colors.foreground} />
-                    ) : (
-                      <GoogleMark size={18} />
-                    )}
-                    <Text variant="bodySemi" style={styles.googleLabel}>
-                      Continue with Google
-                    </Text>
-                  </Pressable>
-
-                  <View style={styles.dividerRow}>
-                    <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-                    <Text variant="small" tone="muted">
-                      or use your mobile
-                    </Text>
-                    <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-                  </View>
-                </>
-              ) : null}
-
-              <TextField
-                label="Mobile number"
-                prefix="+91"
-                placeholder="98XXXXXXXX"
-                keyboardType="number-pad"
-                textContentType="telephoneNumber"
-                autoComplete="tel"
-                returnKeyType="done"
-                onSubmitEditing={onSendOtp}
-                maxLength={10}
-                value={phone}
-                onChangeText={(t) => {
-                  setPhone(t.replace(/\D/g, ''));
-                  if (error) setError(null);
-                }}
-                error={error}
-                autoFocus
-                style={styles.phoneInput}
-              />
-              <Button
-                label="Send OTP"
-                onPress={onSendOtp}
-                loading={requestOtp.isPending}
-                // Disabled until the number is plausible, so the error state is
-                // something you have to work at rather than the default.
-                disabled={!phoneValid}
-                size="lg"
-                fullWidth
-                style={styles.action}
-              />
-              <Text variant="small" tone="muted" style={styles.legal}>
-                By continuing you agree to our terms of service and privacy
-                policy. We only use your number for order updates.
+          {/* ---- Footer legal text ---- */}
+          <View style={styles.footer}>
+            <Text variant="small" tone="muted" style={styles.footerText}>
+              By continuing, you agree to our
+            </Text>
+            <View style={styles.footerLinks}>
+              <Pressable hitSlop={4}>
+                <Text variant="small" style={styles.footerLink}>
+                  Terms of service
+                </Text>
+              </Pressable>
+              <Text variant="small" tone="muted" style={styles.footerLinkSep}>
+                {'  '}
               </Text>
-            </Animated.View>
-          ) : (
-            <Animated.View style={{ opacity: stepAnim }}>
-              <Text variant="label" tone="muted" uppercase style={styles.otpLabel}>
-                6-digit code
-              </Text>
-              <OtpInput
-                value={otp}
-                onChange={(next) => {
-                  setOtp(next);
-                  if (error) setError(null);
-                }}
-                onComplete={onVerify}
-                error={error}
-                autoFocus
-              />
-
-              {devOtp ? (
-                <View style={[styles.hint, { backgroundColor: colors.accent }]}>
-                  <Feather name="info" size={13} color={colors.mutedForeground} />
-                  <Text variant="small" tone="muted" style={styles.flex}>
-                    No SMS provider is live yet, so your code is{' '}
-                    <Text variant="smallMedium" tone="primary">
-                      {devOtp}
-                    </Text>
-                    .
-                  </Text>
-                </View>
-              ) : mockAuth ? (
-                <View style={[styles.hint, { backgroundColor: colors.accent }]}>
-                  <Feather name="info" size={13} color={colors.mutedForeground} />
-                  <Text variant="small" tone="muted" style={styles.flex}>
-                    Demo sign-in is switched on — enter the shared demo code.
-                    Real SMS goes live once mobile-number registration clears.
-                  </Text>
-                </View>
-              ) : null}
-
-              <Button
-                label="Verify & continue"
-                onPress={() => onVerify()}
-                loading={verifyOtp.isPending}
-                disabled={otp.length !== 6}
-                size="lg"
-                fullWidth
-                style={styles.action}
-              />
-
-              <View style={styles.resendRow}>
-                <Pressable
-                  onPress={() => {
-                    setStep('phone');
-                    setOtp('');
-                    setError(null);
-                  }}
-                  hitSlop={8}
-                >
-                  <Text variant="smallMedium" tone="primary">
-                    Change number
-                  </Text>
-                </Pressable>
-                {secondsLeft > 0 ? (
-                  <Text variant="small" tone="muted">
-                    Resend in {Math.floor(secondsLeft / 60)}:
-                    {String(secondsLeft % 60).padStart(2, '0')}
-                  </Text>
-                ) : (
-                  <Pressable onPress={onSendOtp} hitSlop={8}>
-                    <Text variant="smallMedium" tone="primary">
-                      Resend OTP
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
-            </Animated.View>
-          )}
-        </View>
-
-        {/* Trust strip — the reason to hand over a number at all. */}
-        <View style={styles.trust}>
-          {[
-            { icon: 'shield' as const, label: 'No password\nto remember' },
-            { icon: 'bell' as const, label: 'Order updates\nby notification' },
-            { icon: 'lock' as const, label: 'Never shared\nor sold' },
-          ].map((item) => (
-            <View key={item.icon} style={styles.trustItem}>
-              <Feather name={item.icon} size={15} color={mint} />
-              <Text style={styles.trustLabel}>{item.label}</Text>
+              <Pressable hitSlop={4}>
+                <Text variant="small" style={styles.footerLink}>
+                  Privacy Policy
+                </Text>
+              </Pressable>
             </View>
-          ))}
+          </View>
         </View>
       </KeyboardAwareScrollViewCompat>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: deepInk },
-  scroll: { paddingHorizontal: spacing.lg, flexGrow: 1 },
+/* ================================== PHONE TEXT INPUT ============================ */
 
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+/**
+ * Separate component for the phone TextInput so we don't pull in the full
+ * TextField with its own label / error wrappers — the new design inlines the
+ * input directly inside the country-code row.
+ */
+
+
+function PhoneTextInput({
+  value,
+  onChangeText,
+  onSubmitEditing,
+  placeholder,
+  placeholderTextColor,
+  colors,
+}: {
+  value: string;
+  onChangeText: (t: string) => void;
+  onSubmitEditing: () => void;
+  placeholder: string;
+  placeholderTextColor: string;
+  colors: ReturnType<typeof useColors>;
+}) {
+  return (
+    <TextInput
+      value={value}
+      onChangeText={onChangeText}
+      onSubmitEditing={onSubmitEditing}
+      placeholder={placeholder}
+      placeholderTextColor={placeholderTextColor}
+      keyboardType="number-pad"
+      textContentType="telephoneNumber"
+      autoComplete="tel"
+      returnKeyType="done"
+      maxLength={10}
+      autoFocus
+      style={[
+        styles.phoneInput,
+        { color: colors.foreground },
+      ]}
+    />
+  );
+}
+
+/* =================================== STYLES ================================== */
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  scroll: {
+    flexGrow: 1,
+  },
+
+  /* ---- Hero banner ---- */
+  heroBanner: {
+    width: SCREEN_WIDTH,
+    height: HERO_HEIGHT,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  heroBgImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+  },
+  heroManImage: {
+    position: 'absolute',
+    bottom: 0,
+    alignSelf: 'center',
+    width: SCREEN_WIDTH * 0.55,
+    height: HERO_HEIGHT * 0.75,
+  },
+  heroFade: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 40,
+    /* A LinearGradient would be ideal, but to keep dependencies minimal
+       we use a semi-transparent white overlay that blends the edge. */
+    backgroundColor: 'rgba(248,246,241,0.55)',
+  },
+
+  /* ---- Form card ---- */
+  formCard: {
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
     justifyContent: 'space-between',
   },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  brandWord: {
-    fontFamily: fonts.displayBold,
-    fontSize: 17,
-    lineHeight: 21,
-    color: '#F8F6F1',
+
+  /* ---- Heading ---- */
+  heading: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 22,
+    lineHeight: 28,
+    letterSpacing: -0.3,
+    color: '#1A1A2E',
+    marginBottom: 20,
   },
-  close: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: StyleSheet.hairlineWidth,
+
+  /* ---- Phone row ---- */
+  phoneRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 4,
+  },
+  countryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    height: 52,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  flag: {
+    fontSize: 20,
+  },
+  phoneField: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 52,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    backgroundColor: '#FFFFFF',
+  },
+  phonePrefix: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 15,
+    color: '#1A1A2E',
+  },
+  phoneSeparator: {
+    width: 1,
+    height: 20,
+    backgroundColor: '#E2DDD4',
+    marginHorizontal: 10,
+  },
+  phoneInputWrap: {
+    flex: 1,
+  },
+  phoneInput: {
+    flex: 1,
+    fontFamily: fonts.body,
+    fontSize: 15,
+    paddingVertical: 0,
+    height: 52,
+  },
+
+  /* ---- Error text ---- */
+  errorText: {
+    marginTop: 6,
+    marginBottom: 4,
+    marginLeft: 4,
+  },
+
+  /* ---- Continue button ---- */
+  continueBtn: {
+    height: 54,
+    borderRadius: radii.xl,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 16,
   },
-
-  hero: { marginTop: spacing.xxl },
-  kicker: {
+  continueBtnLabel: {
     fontFamily: fonts.bodySemi,
-    fontSize: 10,
-    lineHeight: 13,
-    letterSpacing: 2,
-    color: mint,
-  },
-  backRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  backLabel: {
-    fontFamily: fonts.monoBold,
-    fontSize: 13,
-    lineHeight: 17,
-    letterSpacing: 0.4,
-    color: mint,
-  },
-  headline: {
-    fontFamily: fonts.displayBold,
-    fontSize: 30,
-    lineHeight: 36,
-    letterSpacing: -0.4,
-    color: '#F8F6F1',
-    marginTop: 10,
-  },
-  sub: {
-    fontFamily: fonts.body,
-    fontSize: 14,
-    lineHeight: 21,
-    color: overlay.mutedForeground,
-    marginTop: spacing.sm,
-    maxWidth: 330,
+    fontSize: 16,
+    letterSpacing: 0.2,
   },
 
-  sheet: {
-    marginTop: spacing.xl,
-    padding: spacing.lg,
-    borderRadius: radii.xl,
+  /* ---- Divider ---- */
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 18,
   },
+  dividerLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+  },
+  dividerText: {
+    marginHorizontal: 14,
+  },
+
+  /* ---- Google button ---- */
   googleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    paddingVertical: 15,
-    borderRadius: radii.lg,
-    borderWidth: StyleSheet.hairlineWidth * 2,
+    height: 52,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    backgroundColor: '#FFFFFF',
   },
-  googleLabel: { lineHeight: 20, fontSize: 14.5 },
-  dividerRow: {
+  googleLabel: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+  },
+
+  /* ---- OTP step ---- */
+  backRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginVertical: spacing.lg,
+    gap: 6,
+    marginBottom: 4,
   },
-  dividerLine: { flex: 1, height: StyleSheet.hairlineWidth },
-
-  phoneInput: {
-    fontFamily: fonts.monoBold,
-    fontSize: 17,
-    letterSpacing: 1.2,
+  backLabel: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 14,
   },
-  action: { marginTop: spacing.lg },
-  legal: { marginTop: spacing.md, lineHeight: 17 },
-
-  otpLabel: { marginBottom: 10 },
+  otpSub: {
+    marginBottom: 20,
+    lineHeight: 21,
+  },
+  otpSection: {
+    marginBottom: 4,
+  },
   hint: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -571,25 +738,37 @@ const styles = StyleSheet.create({
   },
   flex: { flex: 1 },
   resendRow: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing.md,
+    marginTop: 16,
+  },
+  resendLink: {
+    textDecorationLine: 'underline',
   },
 
-  trust: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  /* ---- Footer ---- */
+  footer: {
+    alignItems: 'center',
     marginTop: 'auto',
     paddingTop: spacing.xl,
-    paddingHorizontal: spacing.xs,
+    paddingBottom: 8,
   },
-  trustItem: { alignItems: 'center', gap: 7, flex: 1 },
-  trustLabel: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 10.5,
-    lineHeight: 14,
+  footerText: {
     textAlign: 'center',
-    color: overlay.mutedForeground,
+    lineHeight: 18,
+  },
+  footerLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  footerLink: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 12,
+    lineHeight: 16,
+    color: '#5C6A8A',
+    textDecorationLine: 'underline',
+  },
+  footerLinkSep: {
+    fontSize: 12,
   },
 });

@@ -14,15 +14,38 @@ import {
   setExtraHeaders,
 } from '@workspace/api-client-react';
 
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+
 const domain = process.env.EXPO_PUBLIC_DOMAIN;
 
-// If the domain already includes a protocol (e.g. http://10.x.x.x:3000 for
-// local dev), use it as-is. Otherwise assume https for production hostnames.
-export const API_BASE_URL = domain
-  ? /^https?:\/\//i.test(domain)
-    ? domain
-    : `https://${domain}`
-  : '';
+function resolveApiBaseUrl(): string {
+  if (!domain) return '';
+
+  let url = /^https?:\/\//i.test(domain) ? domain : `https://${domain}`;
+
+  // On native devices running in dev (e.g. Expo Go over Wi-Fi), 'localhost' points to the phone itself.
+  // Dynamically resolve to the Metro bundler host IP if available so the phone can reach the PC's API server.
+  if (
+    Platform.OS !== 'web' &&
+    (url.includes('localhost') || url.includes('127.0.0.1'))
+  ) {
+    const hostUri =
+      Constants.expoConfig?.hostUri ??
+      (Constants as unknown as { manifest2?: { extra?: { expoGo?: { debuggerHost?: string } } } })
+        ?.manifest2?.extra?.expoGo?.debuggerHost;
+    if (hostUri) {
+      const hostIp = hostUri.split(':')[0];
+      if (hostIp && hostIp !== 'localhost' && hostIp !== '127.0.0.1') {
+        url = url.replace(/localhost|127\.0\.0\.1/, hostIp);
+      }
+    }
+  }
+
+  return url;
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
 
 setBaseUrl(API_BASE_URL || null);
 
