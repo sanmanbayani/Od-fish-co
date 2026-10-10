@@ -10,15 +10,10 @@ import { STUDIO_PREVIEWS } from '@/constants/studioPreviews';
 import { rupees } from '@/lib/format';
 import { Text } from '@/components/ui/Text';
 import { Badge } from '@/components/ui/Badge';
+import { QuickAddButton } from '@/components/QuickAddButton';
 
 /** Wide card used in horizontal rails on the home feed. */
-export function ProductCard({
-  product,
-  width = 168,
-}: {
-  product: Product;
-  width?: number;
-}) {
+export function ProductCard({ product, width = 168 }: { product: Product; width?: number }) {
   const colors = useColors();
   const cheapest = product.variants
     .filter((v) => v.isActive)
@@ -50,6 +45,9 @@ export function ProductCard({
             <Badge label="Sold out" tone="navy" />
           </View>
         ) : null}
+        <View style={styles.quickAdd}>
+          <QuickAddButton product={product} />
+        </View>
       </View>
       <View style={styles.body}>
         <Text variant="cardTitle" numberOfLines={1}>
@@ -86,6 +84,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  quickAdd: { position: 'absolute', right: 8, bottom: 8 },
   body: { padding: 10, gap: 2 },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 2 },
   strike: { textDecorationLine: 'line-through' },

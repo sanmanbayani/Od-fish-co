@@ -1,6 +1,5 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import type { Product } from '@workspace/api-client-react';
@@ -11,6 +10,7 @@ import { STUDIO_PREVIEWS } from '@/constants/studioPreviews';
 import { cutLabel, rupees } from '@/lib/format';
 import { Text } from '@/components/ui/Text';
 import { Badge } from '@/components/ui/Badge';
+import { QuickAddButton } from '@/components/QuickAddButton';
 
 /** Full-width row used in the catalogue list. */
 export function ProductRow({ product }: { product: Product }) {
@@ -64,9 +64,7 @@ export function ProductRow({ product }: { product: Product }) {
                 From
               </Text>
             ) : null}
-            <Text variant="price">
-              {rupees(product.fromPricePaise ?? cheapest?.pricePaise)}
-            </Text>
+            <Text variant="price">{rupees(product.fromPricePaise ?? cheapest?.pricePaise)}</Text>
             {cheapest && cheapest.mrpPaise > cheapest.pricePaise ? (
               <Text variant="small" tone="muted" style={styles.strike}>
                 {rupees(cheapest.mrpPaise)}
@@ -74,13 +72,7 @@ export function ProductRow({ product }: { product: Product }) {
             ) : null}
           </View>
           {product.inStock ? (
-            <View style={[styles.cta, { backgroundColor: colors.primary }]}>
-              <Feather
-                name="chevron-right"
-                size={16}
-                color={colors.primaryForeground}
-              />
-            </View>
+            <QuickAddButton product={product} />
           ) : (
             <Badge label="Sold out" tone="neutral" />
           )}
@@ -114,11 +106,4 @@ const styles = StyleSheet.create({
   },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   strike: { textDecorationLine: 'line-through' },
-  cta: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 });
