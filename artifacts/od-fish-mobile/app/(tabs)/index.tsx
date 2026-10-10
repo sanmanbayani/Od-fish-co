@@ -1,15 +1,23 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Animated,
   Image,
   Modal,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,7 +35,8 @@ import { useAuth } from '@/lib/auth';
 import { setPreferredSlot, usePreferredSlot } from '@/lib/preferredSlot';
 import { useUserLocation } from '@/hooks/useUserLocation';
 import { CartBar } from '@/components/CartBar';
-import { CategoryNav } from '@/components/CategoryTile';
+import { CategoryNav, getCategoryNavItems } from '@/components/CategoryTile';
+import { RotatingSearchHint } from '@/components/RotatingSearchHint';
 import { ProductCard } from '@/components/ProductCard';
 import { SlotPicker, slotKey } from '@/components/SlotPicker';
 import { Text } from '@/components/ui/Text';
@@ -45,26 +54,74 @@ const HERO_BG = '#C8D7F7';
 const HERO_SEARCH_BG = '#FFFFFF';
 const HERO_SEARCH_BORDER = 'rgba(0,0,0,0.06)';
 
+/** Scroll distance over which the address row folds away. */
+const ADDRESS_COLLAPSE = 60;
+/** Scroll distance over which the header turns solid white. */
+const HEADER_FILL = 80;
+/** The category bar turns white over the last few px before it pins. */
+const DOCK_FADE = 16;
+
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const gridWidth = Math.min((width - spacing.lg * 2 - 12) / 2, 260);
   const { customer } = useAuth();
-  const scrollY = useRef(new Animated.Value(0)).current;
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [dockThreshold, setDockThreshold] = useState<number>(360);
-  const [isDocked, setIsDocked] = useState<boolean>(false);
 
+  /* ---- Scroll-driven header and sticky category bar ----
+   *
+   * There is exactly one category bar. It sits in the page like any other
+   * section and scrolls with it. When its top reaches the bottom of the folded
+   * header, it is pushed down by however far the page keeps scrolling, so it
+   * holds still under the search bar. Nothing is duplicated or swapped. It all
+   * runs on the UI thread, so it tracks the finger frame for frame.
+   */
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.set(e.contentOffset.y);
+  });
+
+  // Where the bar pins: the bottom edge of the header once the address row has
+  // folded away. Measured from the search bar rather than hard-coded.
+  const [searchBarHeight, setSearchBarHeight] = useState(46);
+  const dockTop = insets.top + spacing.sm + searchBarHeight + spacing.sm;
+  const [categoryY, setCategoryY] = useState<number | null>(null);
+  // Scroll offset at which the bar pins. Huge until measured, so it never pins early.
+  const stickAt = useSharedValue(Number.MAX_SAFE_INTEGER);
   useEffect(() => {
-    const id = scrollY.addListener(({ value }) => {
-      const docked = value >= dockThreshold;
-      setIsDocked((prev) => (prev !== docked ? docked : prev));
-    });
-    return () => {
-      scrollY.removeListener(id);
+    if (categoryY !== null) stickAt.set(Math.max(0, categoryY - dockTop));
+  }, [categoryY, dockTop, stickAt]);
+
+  const headerFillStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.get(), [0, HEADER_FILL], [0, 1], Extrapolation.CLAMP),
+  }));
+  const addressBarStyle = useAnimatedStyle(() => {
+    const y = scrollY.get();
+    return {
+      height: interpolate(y, [0, ADDRESS_COLLAPSE], [44, 0], Extrapolation.CLAMP),
+      marginBottom: interpolate(y, [0, ADDRESS_COLLAPSE], [spacing.sm, 0], Extrapolation.CLAMP),
+      opacity: interpolate(y, [0, ADDRESS_COLLAPSE * 0.66], [1, 0], Extrapolation.CLAMP),
     };
-  }, [dockThreshold, scrollY]);
+  });
+  // The shadow belongs to whichever layer is the bottom edge: the header
+  // until the bar pins, then the bar.
+  const headerShadeStyle = useAnimatedStyle(() => {
+    const y = scrollY.get();
+    const s = stickAt.get();
+    const filled = interpolate(y, [0, HEADER_FILL], [0, 1], Extrapolation.CLAMP);
+    const docked = interpolate(y, [s - DOCK_FADE, s], [0, 1], Extrapolation.CLAMP);
+    return { opacity: filled * (1 - docked) };
+  });
+  const categoryStickStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: Math.max(0, scrollY.get() - stickAt.get()) }],
+  }));
+  const categoryDockedStyle = useAnimatedStyle(() => {
+    const s = stickAt.get();
+    return {
+      opacity: interpolate(scrollY.get(), [s - DOCK_FADE, s], [0, 1], Extrapolation.CLAMP),
+    };
+  });
 
   const handleCategorySelect = (slug: string) => {
     setSelectedCategory(slug);
@@ -174,92 +231,20 @@ export default function HomeScreen() {
       ? countdown(slot.secondsToCutoff)
       : null) ?? (preferredSlot ? 'Your slot' : null);
 
-  /* ---- Scroll-driven sticky header ---- */
-
-  // Background: transparent → white as user scrolls
-  const stickyBg = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: ['rgba(255,255,255,0)', 'rgba(255,255,255,0.97)'],
-    extrapolate: 'clamp',
-  });
-  // Shadow: 0 → visible
-  const stickyShadowOpacity = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: [0, 0.08],
-    extrapolate: 'clamp',
-  });
-  // Address bar collapses as user scrolls (height, opacity, spacing)
-  const addressBarHeight = scrollY.interpolate({
-    inputRange: [0, 60],
-    outputRange: [44, 0],
-    extrapolate: 'clamp',
-  });
-  const addressBarOpacity = scrollY.interpolate({
-    inputRange: [0, 40],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
-  const addressBarMargin = scrollY.interpolate({
-    inputRange: [0, 60],
-    outputRange: [spacing.sm, 0],
-    extrapolate: 'clamp',
-  });
-  // Elevation for Android (0 initially, ramps up with scroll)
-  const stickyElevation = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: [0, 4],
-    extrapolate: 'clamp',
-  });
-
-  // Docked category bar animations (stacks below search bar as scroll happens)
-  const dockedOpacity = scrollY.interpolate({
-    inputRange: [Math.max(0, dockThreshold - 15), dockThreshold],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-  const dockedHeight = scrollY.interpolate({
-    inputRange: [Math.max(0, dockThreshold - 15), dockThreshold],
-    outputRange: [0, 68],
-    extrapolate: 'clamp',
-  });
-  const dockedTranslateY = scrollY.interpolate({
-    inputRange: [Math.max(0, dockThreshold - 15), dockThreshold],
-    outputRange: [-4, 0],
-    extrapolate: 'clamp',
-  });
-  const inlineOpacity = scrollY.interpolate({
-    inputRange: [Math.max(0, dockThreshold - 1), dockThreshold],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
+  // Words for the rotating search hint, from what is actually on sale today.
+  const hintWords = buildHintWords(data);
 
   return (
     <Screen>
       {/* ---- Sticky header: address bar + search bar + categories stacked on scroll ---- */}
-      <Animated.View
-        style={[
-          styles.stickySearchWrap,
-          {
-            paddingTop: insets.top + spacing.sm,
-            backgroundColor: stickyBg,
-            shadowOpacity: stickyShadowOpacity,
-            elevation: stickyElevation,
-          },
-        ]}
-      >
+      <View style={[styles.stickySearchWrap, { paddingTop: insets.top + spacing.sm }]}>
+        <Animated.View style={[styles.whiteFill, headerFillStyle]} />
+        <Animated.View style={[styles.shade, headerShadeStyle]}>
+          <LinearGradient colors={SHADE_COLORS} style={StyleSheet.absoluteFill} />
+        </Animated.View>
         <View style={styles.stickyTopContent}>
           {/* Address bar — collapses on scroll */}
-          <Animated.View
-            style={[
-              styles.heroTopBar,
-              {
-                height: addressBarHeight,
-                opacity: addressBarOpacity,
-                marginBottom: addressBarMargin,
-                overflow: 'hidden',
-              },
-            ]}
-          >
+          <Animated.View style={[styles.heroTopBar, styles.addressClip, addressBarStyle]}>
             <Pressable
               onPress={handleAddressPress}
               hitSlop={6}
@@ -304,36 +289,23 @@ export default function HomeScreen() {
                 params: { autofocus: Date.now().toString() },
               })
             }
+            onLayout={(e) => {
+              const h = Math.round(e.nativeEvent.layout.height);
+              if (h > 0 && h !== searchBarHeight) setSearchBarHeight(h);
+            }}
+            accessibilityRole="search"
+            accessibilityLabel="Search fish and seafood"
             style={styles.searchBar}
           >
             <Feather name="search" size={18} color="#9CA3AF" />
-            <Text variant="body" style={styles.searchPlaceholder}>
-              Search for..
-            </Text>
+            <RotatingSearchHint
+              words={hintWords}
+              style={styles.searchPlaceholder}
+              wordStyle={styles.searchWord}
+            />
           </Pressable>
         </View>
-
-        {/* Categories stacked below search bar in sticky header */}
-        {data.categories.length > 0 ? (
-          <Animated.View
-            style={[
-              styles.dockedCategoryWrap,
-              {
-                height: dockedHeight,
-                opacity: dockedOpacity,
-                transform: [{ translateY: dockedTranslateY }],
-              },
-            ]}
-            pointerEvents={isDocked ? 'auto' : 'none'}
-          >
-            <CategoryNav
-              categories={data.categories}
-              selectedSlug={selectedCategory}
-              onSelect={handleCategorySelect}
-            />
-          </Animated.View>
-        ) : null}
-      </Animated.View>
+      </View>
 
       <Animated.ScrollView
         contentContainerStyle={{ paddingBottom: TAB_BAR_CLEARANCE + 60 }}
@@ -342,10 +314,7 @@ export default function HomeScreen() {
         }
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false },
-        )}
+        onScroll={onScroll}
       >
         {/* ============================================================== */}
         {/*  HERO — light lavender band with illustration compositing      */}
@@ -461,7 +430,7 @@ export default function HomeScreen() {
                   at 6am.
                 </Text>
               ) : (
-                <Animated.ScrollView bounces={false} showsVerticalScrollIndicator={false}>
+                <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
                   <SlotPicker
                     slots={slotList.data}
                     selectedKey={shownSlot?.key ?? null}
@@ -472,27 +441,25 @@ export default function HomeScreen() {
                       }, 180);
                     }}
                   />
-                </Animated.ScrollView>
+                </ScrollView>
               )}
             </View>
           </View>
         </Modal>
 
-        {/* Quick-Commerce Category Bar (Inline, smoothly docks below search bar on scroll) */}
+        {/* Category bar: one instance, pins under the search bar (see above). */}
         {data.categories.length > 0 ? (
           <Animated.View
             onLayout={(e) => {
-              const y = e.nativeEvent.layout.y;
-              const headerBottom = insets.top + spacing.sm + 46 + spacing.sm;
-              if (y > 100) {
-                setDockThreshold(Math.max(100, y - headerBottom));
-              }
+              const y = Math.round(e.nativeEvent.layout.y);
+              if (y !== categoryY) setCategoryY(y);
             }}
-            style={[
-              styles.categorySection,
-              { opacity: inlineOpacity },
-            ]}
+            style={[styles.categorySection, categoryStickStyle]}
           >
+            <Animated.View style={[styles.whiteFill, categoryDockedStyle]} />
+            <Animated.View style={[styles.shade, categoryDockedStyle]}>
+              <LinearGradient colors={SHADE_COLORS} style={StyleSheet.absoluteFill} />
+            </Animated.View>
             <CategoryNav
               categories={data.categories}
               selectedSlug={selectedCategory}
@@ -509,7 +476,7 @@ export default function HomeScreen() {
               caption="Landed this morning at Sassoon Dock"
               onSeeAll={() => router.push('/(tabs)/shop')}
             />
-            <Animated.ScrollView
+            <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.rail}
@@ -517,7 +484,7 @@ export default function HomeScreen() {
               {data.todaysCatch.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
-            </Animated.ScrollView>
+            </ScrollView>
           </View>
         ) : null}
 
@@ -566,6 +533,33 @@ export default function HomeScreen() {
   );
 }
 
+const SHADE_COLORS = ['rgba(11,26,61,0.09)', 'rgba(11,26,61,0)'] as const;
+
+/**
+ * Category short names interleaved with today's catch, so the hint names
+ * things a customer can actually buy right now. Long names are skipped so the
+ * hint never truncates.
+ */
+function buildHintWords(data: {
+  categories: Parameters<typeof getCategoryNavItems>[0];
+  todaysCatch: { name: string }[];
+}): string[] {
+  const cats = getCategoryNavItems(data.categories)
+    .filter((t) => t.slug !== 'all' && t.slug !== 'ready-to-cook')
+    .map((t) => t.name);
+  const catch_ = data.todaysCatch.map((p) => p.name.trim());
+  const out: string[] = [];
+  for (let i = 0; i < Math.max(cats.length, catch_.length); i++) {
+    if (cats[i]) out.push(cats[i]);
+    if (catch_[i]) out.push(catch_[i]);
+  }
+  const seen = new Set<string>();
+  return out
+    .filter((w) => w.length > 0 && w.length <= 14)
+    .filter((w) => (seen.has(w.toLowerCase()) ? false : (seen.add(w.toLowerCase()), true)))
+    .slice(0, 8);
+}
+
 function SectionHeader({
   title,
   caption,
@@ -609,18 +603,24 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    // elevation and shadowOpacity are animated via inline style
   },
+  whiteFill: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FFFFFF',
+  },
+  /** Soft drop shadow hung just below a layer; works the same on both platforms. */
+  shade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '100%',
+    height: 8,
+    pointerEvents: 'none',
+  },
+  addressClip: { overflow: 'hidden' },
   stickyTopContent: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
-  },
-  dockedCategoryWrap: {
-    width: '100%',
-    overflow: 'hidden',
   },
 
   /* ------ NEW hero styles ------ */
@@ -686,10 +686,14 @@ const styles = StyleSheet.create({
     borderColor: HERO_SEARCH_BORDER,
   },
   searchPlaceholder: {
-    flex: 1,
     color: '#9CA3AF',
     fontFamily: fonts.body,
     fontSize: 14,
+    lineHeight: 20,
+  },
+  searchWord: {
+    color: '#6B7280',
+    fontFamily: fonts.bodyMedium,
   },
 
   /* Illustration zone */
@@ -773,7 +777,8 @@ const styles = StyleSheet.create({
   },
   sheetSub: { marginTop: 4, marginBottom: spacing.md },
   sheetBusy: { marginVertical: spacing.lg },
-  categorySection: { marginTop: spacing.md },
+  // Above the sections that follow, so they slide underneath once it pins.
+  categorySection: { marginTop: spacing.md, zIndex: 10 },
   section: { marginTop: spacing.xl, paddingHorizontal: spacing.lg },
   sectionHeader: { marginBottom: spacing.md },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

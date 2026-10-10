@@ -67,3 +67,10 @@ well-formed but fake `ExponentPushToken[...]`, send to it, and confirm the push
 service answers `DeviceNotRegistered` and the row is deleted. That exercises
 copy, batching, transport and dead-token cleanup — everything except the last
 hop. Real end-to-end verification waits for a real build.
+
+## Sticky elements: one instance, translated in place
+
+On the home screen the category bar is a single element inside the scroll content. Once it reaches the bottom of the folded header, it gets translated down by the scroll overshoot. It is never a second copy shown in the header.
+
+**Why:** the earlier two-copy crossfade showed both bars on top of each other during a slow scroll, and the user called it out. A single instance also keeps the selected state and horizontal scroll position consistent.
+**How to apply:** do scroll-linked header work with Reanimated on the UI thread. The pin point is measured (search bar height and the bar's layout y), not hard-coded. Shadows are gradient strips with animated opacity, not `elevation`/`shadowOpacity`, so both platforms match.
